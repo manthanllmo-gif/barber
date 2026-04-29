@@ -1,0 +1,86 @@
+/* Mobile Optimization */
+@media (max-width: 768px) {
+  .dashboard-inner {
+    padding: 16px !important;
+  }
+
+  .premium-header {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 20px;
+    margin-bottom: 30px !important;
+  }
+
+  .premium-title {
+    font-size: 24px !important;
+  }
+
+  .tab-nav {
+    width: 100%;
+    overflow-x: auto;
+    display: flex;
+    white-space: nowrap;
+    padding: 8px !important;
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .tab-nav::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+  }
+
+  .tab-btn {
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+    flex-shrink: 0;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .stat-card {
+    padding: 16px !important;
+  }
+
+  .stat-value {
+    font-size: 24px !important;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 16px;
+    margin-bottom: 24px !important;
+  }
+
+  .staff-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .staff-item {
+    padding: 16px !important;
+  }
+
+  .content-card {
+    padding: 20px !important;
+    border-radius: 20px !important;
+  }
+
+  .premium-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Compact mode for mobile */
+  .mobile-compact {
+    padding: 12px !important;
+  }
+
+  .avatar {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 16px !important;
+  }
+}

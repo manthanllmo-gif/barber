@@ -270,7 +270,7 @@ const Header = ({ onOpenCart }) => {
             color: 'white', 
             fontSize: '1.2rem', 
             cursor: 'pointer',
-            zIndex: 1001,
+            zIndex: 3002,
             width: '45px',
             height: '45px',
             borderRadius: '12px',
@@ -301,7 +301,7 @@ const Header = ({ onOpenCart }) => {
                 bottom: 0,
                 background: 'rgba(0,0,0,0.6)',
                 backdropFilter: 'blur(4px)',
-                zIndex: 998
+                zIndex: 3000
               }}
             />
             <motion.div
@@ -316,7 +316,7 @@ const Header = ({ onOpenCart }) => {
                 bottom: 0,
                 width: '300px',
                 background: '#0f0f14',
-                zIndex: 999,
+                zIndex: 3001,
                 padding: '90px 20px 40px',
                 display: 'flex',
                 flexDirection: 'column',
@@ -325,12 +325,58 @@ const Header = ({ onOpenCart }) => {
                 borderLeft: '1px solid rgba(255,255,255,0.08)'
               }}
             >
-              {navLinks}
-              <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+              <button
+                onClick={() => setIsMenuOpen(false)}
+                style={{
+                  position: 'absolute',
+                  top: '20px',
+                  right: '20px',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: 'none',
+                  color: '#fff',
+                  fontSize: '24px',
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  zIndex: 3002
+                }}
+              >
+                ×
+              </button>
+              
+              {/* Close Dongle Handle */}
+              <div
+                onClick={() => setIsMenuOpen(false)}
+                style={{
+                  position: 'absolute',
+                  left: '-30px',
+                  top: '100px',
+                  width: '30px',
+                  height: '60px',
+                  background: '#0f0f14',
+                  borderRadius: '12px 0 0 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRight: 'none',
+                  color: 'rgba(255,255,255,0.4)',
+                  boxShadow: '-5px 0 15px rgba(0,0,0,0.2)'
+                }}
+              >
+                <div style={{ width: '2px', height: '20px', background: 'currentColor', borderRadius: '2px', opacity: 0.5 }} />
+              </div>
+
+              <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '10px' }}>
                 {!user ? (
                   <button 
                     onClick={() => { navigate('/login'); setIsMenuOpen(false); }}
-                    style={{ ...buttonStyle, width: '100%', padding: '14px' }}
+                    style={{ ...buttonStyle, width: '100%', padding: '12px' }}
                   >
                     Login
                   </button>
@@ -341,12 +387,13 @@ const Header = ({ onOpenCart }) => {
                       setIsMenuOpen(false);
                       navigate('/');
                     }}
-                    style={{ ...buttonStyle, width: '100%', padding: '14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+                    style={{ ...buttonStyle, width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
                   >
                     Logout
                   </button>
                 )}
               </div>
+              {navLinks}
             </motion.div>
           </>
         )}
@@ -487,7 +534,7 @@ const AuthPromptModal = ({ isOpen, onClose }) => {
               inset: 0,
               background: 'rgba(0,0,0,0.8)',
               backdropFilter: 'blur(10px)',
-              zIndex: 3000
+              zIndex: 4000
             }}
           />
           <div style={{
@@ -496,7 +543,7 @@ const AuthPromptModal = ({ isOpen, onClose }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 3001,
+            zIndex: 4001,
             padding: '20px',
             pointerEvents: 'none'
           }}>
@@ -513,9 +560,41 @@ const AuthPromptModal = ({ isOpen, onClose }) => {
                 textAlign: 'center',
                 border: '1px solid rgba(255,255,255,0.08)',
                 boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
-                pointerEvents: 'auto'
+                pointerEvents: 'auto',
+                position: 'relative'
               }}
             >
+              <button
+                onClick={onClose}
+                style={{
+                  position: 'absolute',
+                  top: '20px',
+                  right: '20px',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: 'none',
+                  color: 'rgba(255,255,255,0.5)',
+                  fontSize: '20px',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  zIndex: 1
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.color = '#fff';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                  e.currentTarget.style.color = 'rgba(255,255,255,0.5)';
+                }}
+              >
+                ×
+              </button>
               <div style={{ fontSize: '3rem', marginBottom: '20px' }}>🎫</div>
               <h2 style={{ color: 'white', fontSize: '1.5rem', fontWeight: '800', marginBottom: '12px' }}>Your Tokens</h2>
               <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: '32px', lineHeight: '1.6' }}>

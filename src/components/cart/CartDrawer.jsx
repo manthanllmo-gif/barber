@@ -22,7 +22,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                             inset: 0,
                             background: 'rgba(0,0,0,0.6)',
                             backdropFilter: 'blur(4px)',
-                            zIndex: 1000
+                            zIndex: 3000
                         }}
                     />
 
@@ -40,7 +40,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                             width: 'min(100%, 400px)',
                             background: '#161621',
                             boxShadow: '-10px 0 30px rgba(0,0,0,0.5)',
-                            zIndex: 1001,
+                            zIndex: 3001,
                             padding: '30px',
                             display: 'flex',
                             flexDirection: 'column'

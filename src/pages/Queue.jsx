@@ -824,13 +824,37 @@ const Queue = () => {
                         initial={{ opacity: 0 }} 
                         animate={{ opacity: 1 }} 
                         exit={{ opacity: 0 }}
+                        onClick={() => setShowAuthModal(false)}
                         style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     >
                         <motion.div 
                             initial={{ scale: 0.9, y: 20 }}
                             animate={{ scale: 1, y: 0 }}
-                            style={{ width: '90%', maxWidth: '400px', background: 'var(--background)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '24px', padding: '40px' }}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ position: 'relative', width: '90%', maxWidth: '400px', background: 'var(--background)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '24px', padding: '40px' }}
                         >
+                            <button 
+                                onClick={() => setShowAuthModal(false)}
+                                style={{ 
+                                    position: 'absolute', 
+                                    top: '20px', 
+                                    right: '20px', 
+                                    background: 'rgba(255,255,255,0.05)', 
+                                    border: '1px solid rgba(255,255,255,0.1)', 
+                                    borderRadius: '50%', 
+                                    width: '32px', 
+                                    height: '32px', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center', 
+                                    color: 'white', 
+                                    cursor: 'pointer',
+                                    fontSize: '1.2rem',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                ×
+                            </button>
                             <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '10px', textAlign: 'center' }}>{authMode === 'signup' ? 'Create Account' : 'Welcome Back'}</h2>
                             <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '30px' }}>Join the queue instantly with your phone.</p>
                                    <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

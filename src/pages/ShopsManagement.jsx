@@ -15,21 +15,20 @@ const S = {
         borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '14px',
     },
     editBtn: {
-        padding: '6px 12px', backgroundColor: '#fff', color: '#673ab7', border: '1px solid #673ab7',
-        borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '12px',
-        marginLeft: '10px',
+        padding: '5px 8px', backgroundColor: '#fff', color: '#673ab7', border: '1px solid #673ab7',
+        borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '11px',
     },
     deleteBtn: {
-        padding: '6px 10px', backgroundColor: '#fff', color: '#d32f2f', border: '1px solid #d32f2f',
-        borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '12px',
-        marginLeft: '10px',
+        padding: '5px 8px', backgroundColor: '#fff', color: '#d32f2f', border: '1px solid #d32f2f',
+        borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '11px',
+        marginLeft: '4px',
     },
     hideBtn: (active) => ({
-        padding: '6px 10px', backgroundColor: active ? '#fff' : '#f5f5f5',
+        padding: '5px 8px', backgroundColor: active ? '#fff' : '#f5f5f5',
         color: active ? '#2e7d32' : '#000000',
         border: active ? '1px solid #2e7d32' : '1px solid #000000',
-        borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '12px',
-        marginLeft: '10px',
+        borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '11px',
+        marginLeft: '4px',
     }),
     statusBadge: (active) => ({
         padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 700,
@@ -41,9 +40,9 @@ const S = {
     }),
     // ── Table
     table: { width: '100%', borderCollapse: 'collapse', backgroundColor: '#fff', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' },
-    th: { textAlign: 'left', padding: '12px 16px', backgroundColor: '#f4f4f8', fontSize: '12px', fontWeight: 700, color: '#000000', borderBottom: '1px solid #eee', textTransform: 'uppercase', letterSpacing: '.4px' },
-    td: { padding: '13px 16px', fontSize: '14px', borderBottom: '1px solid #f0f0f0', verticalAlign: 'middle', color: '#000000' },
-    tdMuted: { padding: '13px 16px', fontSize: '14px', borderBottom: '1px solid #f0f0f0', verticalAlign: 'middle', color: '#000000' },
+    th: { textAlign: 'left', padding: '10px 12px', backgroundColor: '#f4f4f8', fontSize: '11px', fontWeight: 700, color: '#000000', borderBottom: '1px solid #eee', textTransform: 'uppercase', letterSpacing: '.4px' },
+    td: { padding: '10px 12px', fontSize: '13px', borderBottom: '1px solid #f0f0f0', verticalAlign: 'middle', color: '#000000' },
+    tdMuted: { padding: '10px 12px', fontSize: '13px', borderBottom: '1px solid #f0f0f0', verticalAlign: 'middle', color: '#000000' },
     clickRow: (expanded) => ({
         cursor: 'pointer',
         backgroundColor: expanded ? '#f8f5ff' : 'transparent',
@@ -65,7 +64,11 @@ const S = {
     detailBadge: { fontSize: '11px', padding: '2px 7px', borderRadius: '8px', backgroundColor: '#ede7f6', color: '#5e35b1', fontWeight: 600 },
     // ── Modal
     overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200 },
-    modal: { backgroundColor: '#fff', borderRadius: '14px', padding: '32px', width: '90%', maxWidth: '480px', boxShadow: '0 8px 40px rgba(0,0,0,0.18)', maxHeight: '90vh', overflowY: 'auto' },
+    modal: { position: 'relative', backgroundColor: '#fff', borderRadius: '14px', padding: '32px', width: '90%', maxWidth: '480px', boxShadow: '0 8px 40px rgba(0,0,0,0.18)', maxHeight: '90vh', overflowY: 'auto' },
+    closeX: {
+        position: 'absolute', top: '15px', right: '15px', border: 'none', background: 'none', fontSize: '22px', cursor: 'pointer', color: '#000000', opacity: 0.5,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'opacity 0.2s', padding: '5px'
+    },
     modalTitle: { margin: '0 0 22px 0', fontSize: '20px', fontWeight: 700, color: '#1a1a2e' },
     formGroup: { marginBottom: '16px' },
     label: { display: 'block', marginBottom: '5px', fontSize: '13px', fontWeight: 600, color: '#000000' },
@@ -427,7 +430,7 @@ const ShopDetailPanel = ({ shopId }) => {
 
     return (
         <td colSpan={6} style={S.detailCell}>
-            <div style={S.detailInner}>
+            <div className="shop-detail-inner" style={S.detailInner}>
                 {/* Analytics Snapshot */}
                 <div style={{ ...S.detailSection, backgroundColor: '#fdfbff', border: '1px solid #ede7f6', borderRadius: '10px', padding: '12px 18px' }}>
                     <div style={S.detailHeading}>🎟️ Activity Summary</div>
@@ -507,7 +510,7 @@ const ShopDetailPanel = ({ shopId }) => {
                         <div>
                             <h4 style={{ margin: '0 0 20px 0', fontSize: '16px', color: '#1a1a2e' }}>📈 Detailed Performance Analysis</h4>
                             
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                            <div className="analytics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
                                 <div style={{ padding: '15px', backgroundColor: '#f0f4f8', borderRadius: '10px', textAlign: 'center' }}>
                                     <div style={{ fontSize: '11px', color: '#666', textTransform: 'uppercase', marginBottom: '5px' }}>Avg Session</div>
                                     <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#2196f3' }}>{analyticsData.overall.avgServiceTime}m</div>
@@ -782,7 +785,32 @@ const ShopsManagement = () => {
     };
 
     return (
-        <div style={S.page}>
+        <div className="admin-page-container" style={S.page}>
+            <style>{`
+                @media (max-width: 768px) {
+                    .admin-page-container {
+                        padding: 16px !important;
+                    }
+                    .responsive-table-container {
+                        overflow-x: auto;
+                        -webkit-overflow-scrolling: touch;
+                        margin-bottom: 20px;
+                        border: 1px solid #eee;
+                        border-radius: 8px;
+                    }
+                    .admin-modal {
+                        width: 95% !important;
+                        margin: 20px auto !important;
+                        padding: 20px !important;
+                    }
+                    .shop-detail-grid {
+                        grid-template-columns: 1fr !important;
+                    }
+                    .shop-detail-panel {
+                        margin-top: 20px !important;
+                    }
+                }
+            `}</style>
             {/* ── Header ── */}
             <div style={S.header}>
                 <h2 style={S.title}>🛡️ Admin Center</h2>
@@ -811,60 +839,62 @@ const ShopsManagement = () => {
                 ) : fetching ? (
                     <p style={{ color: '#000000' }}>Loading shops...</p>
                 ) : (
-                    <table style={S.table}>
-                        <thead>
-                            <tr>
-                                <th style={S.th}></th>
-                                <th style={S.th}>Shop Name</th>
-                                <th style={S.th}>Address</th>
-                                <th style={S.th}>Status</th>
-                                <th style={S.th}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {shops.length === 0 ? (
-                                <tr><td colSpan={6} style={S.emptyRow}>No shops yet.</td></tr>
-                            ) : (
-                                shops.map(shop => {
-                                    const isExpanded = expandedId === shop.id;
-                                    const createdDate = shop.created_at
-                                        ? new Date(shop.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-                                        : '—';
-                                    return (
-                                        <React.Fragment key={shop.id}>
-                                            <tr
-                                                style={S.clickRow(isExpanded)}
-                                                onClick={() => toggleRow(shop.id)}
-                                            >
-                                                <td style={{ ...S.td, width: '36px', fontSize: '12px', color: '#9575cd' }}>
-                                                    {isExpanded ? '▼' : '▶'}
-                                                </td>
-                                                <td style={{ ...S.td, fontWeight: 600 }}>{shop.name}</td>
-                                                <td style={S.tdMuted}>{shop.address || '—'}</td>
-                                                <td style={S.td}>
-                                                    <span style={S.statusBadge(shop.is_active)}>
-                                                        {shop.is_active !== false ? 'Active' : 'Hidden'}
-                                                    </span>
-                                                </td>
-                                                <td style={S.td}>
-                                                    <button style={S.editBtn} onClick={(e) => openEditModal(e, shop)}>✏️ Edit</button>
-                                                    <button style={S.hideBtn(shop.is_active !== false)} onClick={(e) => handleToggleVisibility(e, shop)}>
-                                                        {shop.is_active !== false ? '👁️ Hide' : '🫥 Show'}
-                                                    </button>
-                                                    <button style={S.deleteBtn} onClick={(e) => handleDeleteShop(e, shop.id)}>🗑️ Delete</button>
-                                                </td>
-                                            </tr>
-                                            {isExpanded && (
-                                                <tr key={`detail-${shop.id}`}>
-                                                    <ShopDetailPanel shopId={shop.id} />
+                    <div className="responsive-table-container">
+                        <table style={S.table}>
+                            <thead>
+                                <tr>
+                                    <th style={S.th}></th>
+                                    <th style={S.th}>Shop Name</th>
+                                    <th style={S.th}>Address</th>
+                                    <th style={S.th}>Status</th>
+                                    <th style={S.th}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {shops.length === 0 ? (
+                                    <tr><td colSpan={6} style={S.emptyRow}>No shops yet.</td></tr>
+                                ) : (
+                                    shops.map(shop => {
+                                        const isExpanded = expandedId === shop.id;
+                                        const createdDate = shop.created_at
+                                            ? new Date(shop.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                                            : '—';
+                                        return (
+                                            <React.Fragment key={shop.id}>
+                                                <tr
+                                                    style={S.clickRow(isExpanded)}
+                                                    onClick={() => toggleRow(shop.id)}
+                                                >
+                                                    <td style={{ ...S.td, width: '36px', fontSize: '12px', color: '#9575cd' }}>
+                                                        {isExpanded ? '▼' : '▶'}
+                                                    </td>
+                                                    <td style={{ ...S.td, fontWeight: 600, minWidth: '110px' }}>{shop.name}</td>
+                                                    <td style={{ ...S.tdMuted, minWidth: '110px' }}>{shop.address || '—'}</td>
+                                                    <td style={{ ...S.td, minWidth: '70px' }}>
+                                                        <span style={S.statusBadge(shop.is_active)}>
+                                                            {shop.is_active !== false ? 'Active' : 'Hidden'}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ ...S.td, minWidth: '170px', textAlign: 'right' }}>
+                                                        <button style={S.editBtn} onClick={(e) => openEditModal(e, shop)}>✏️ Edit</button>
+                                                        <button style={S.hideBtn(shop.is_active !== false)} onClick={(e) => handleToggleVisibility(e, shop)}>
+                                                            {shop.is_active !== false ? '👁️ Hide' : '🫥 Show'}
+                                                        </button>
+                                                        <button style={S.deleteBtn} onClick={(e) => handleDeleteShop(e, shop.id)}>🗑️ Delete</button>
+                                                    </td>
                                                 </tr>
-                                            )}
-                                        </React.Fragment>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
+                                                {isExpanded && (
+                                                    <tr key={`detail-${shop.id}`}>
+                                                        <ShopDetailPanel shopId={shop.id} />
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 )
             )}
 
@@ -873,52 +903,55 @@ const ShopsManagement = () => {
                 fetchingProducts ? (
                     <p style={{ color: '#000000' }}>Loading inventory...</p>
                 ) : (
-                    <table style={S.table}>
-                        <thead>
-                            <tr>
-                                <th style={S.th}>Product Name</th>
-                                <th style={S.th}>Price</th>
-                                <th style={S.th}>Stock</th>
-                                <th style={S.th}>Source</th>
-                                <th style={S.th}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {allProducts.length === 0 ? (
-                                <tr><td colSpan={5} style={S.emptyRow}>No products found.</td></tr>
-                            ) : (
-                                allProducts.map(p => (
-                                    <tr key={p.id}>
-                                        <td style={{ ...S.td, fontWeight: 600 }}>{p.name}</td>
-                                        <td style={S.td}>₹{p.price}</td>
-                                        <td style={{ ...S.td, color: p.stock > 0 ? '#333' : '#e53935' }}>{p.stock}</td>
-                                        <td style={S.td}>
-                                            <span style={S.sourceBadge(!p.shop_id)}>
-                                                {p.shop_id ? `🏪 ${p.shops?.name || 'Shop'}` : '🏛️ System'}
-                                            </span>
-                                        </td>
-                                        <td style={S.td}>
-                                            <div style={{ display: 'flex', gap: '10px' }}>
-                                                <button
-                                                    style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', color: '#673ab7' }}
-                                                    onClick={() => openProductEditModal(p)}
-                                                >✏️</button>
-                                                <button
-                                                    style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '16px' }}
-                                                    onClick={() => handleDeleteProduct(p.id)}
-                                                >🗑️</button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                    <div className="responsive-table-container">
+                        <table style={S.table}>
+                            <thead>
+                                <tr>
+                                    <th style={S.th}>Product Name</th>
+                                    <th style={S.th}>Price</th>
+                                    <th style={S.th}>Stock</th>
+                                    <th style={S.th}>Source</th>
+                                    <th style={S.th}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {allProducts.length === 0 ? (
+                                    <tr><td colSpan={5} style={S.emptyRow}>No products found.</td></tr>
+                                ) : (
+                                    allProducts.map(p => (
+                                        <tr key={p.id}>
+                                             <td style={{ ...S.td, fontWeight: 600, minWidth: '120px' }}>{p.name}</td>
+                                             <td style={{ ...S.td, minWidth: '60px' }}>₹{p.price}</td>
+                                             <td style={{ ...S.td, color: p.stock > 0 ? '#333' : '#e53935', minWidth: '60px' }}>{p.stock}</td>
+                                             <td style={{ ...S.td, minWidth: '120px' }}>
+                                                 <span style={S.sourceBadge(!p.shop_id)}>
+                                                     {p.shop_id ? `🏪 ${p.shops?.name || 'Shop'}` : '🏛️ System'}
+                                                 </span>
+                                             </td>
+                                             <td style={{ ...S.td, minWidth: '70px', textAlign: 'right' }}>
+                                                <div style={{ display: 'flex', gap: '10px' }}>
+                                                    <button
+                                                        style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', color: '#673ab7' }}
+                                                        onClick={() => openProductEditModal(p)}
+                                                    >✏️</button>
+                                                    <button
+                                                        style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '16px' }}
+                                                        onClick={() => handleDeleteProduct(p.id)}
+                                                    >🗑️</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 )
             )}      {/* ── Add Shop Modal ── */}
             {showModal && (
                 <div style={S.overlay} onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
-                    <div style={S.modal}>
+                    <div className="admin-modal" style={S.modal}>
+                        <button style={S.closeX} onClick={closeModal} title="Close">✕</button>
                         <h3 style={S.modalTitle}>{editingShop ? '✏️ Edit Shop' : '➕ Add New Shop'}</h3>
 
                         {error && <div style={S.errorBox}>⚠️ {error}</div>}
@@ -1002,7 +1035,8 @@ const ShopsManagement = () => {
             {/* ── Add Product Modal ── */}
             {productModal && (
                 <div style={S.overlay} onClick={(e) => { if (e.target === e.currentTarget) setProductModal(false); }}>
-                    <div style={S.modal}>
+                    <div className="admin-modal" style={S.modal}>
+                        <button style={S.closeX} onClick={() => setProductModal(false)} title="Close">✕</button>
                         <h3 style={S.modalTitle}>{editingProduct ? '✏️ Edit Product' : '📦 Add Global Product'}</h3>
                         {error && <div style={S.errorBox}>⚠️ {error}</div>}
                         {success && <div style={S.successBox}>{success}</div>}

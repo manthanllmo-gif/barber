@@ -1,0 +1,33 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  
+  # Redirect to HTTPS
+  RewriteCond %{HTTPS} off
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # SPA Routing
+  RewriteBase /
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# Security Headers
+<IfModule mod_headers.c>
+  Header set X-XSS-Protection "1; mode=block"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  # Optional: Content-Security-Policy
+  # Header set Content-Security-Policy "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval';"
+</IfModule>
+
+# Disable Directory Listing
+Options -Indexes
+
+# Prevent access to sensitive files
+<FilesMatch "^\.env|package\.json|package-lock\.json|vite\.config\.js">
+  Order allow,deny
+  Deny from all
+</FilesMatch>

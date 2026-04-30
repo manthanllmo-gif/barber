@@ -4,18 +4,23 @@ import { useNavigate } from 'react-router-dom';
 import { useShop } from '../contexts/ShopContext';
 import { useCart } from '../contexts/CartContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../contexts/AuthContext';
+import CountdownTimer from '../components/common/CountdownTimer';
 import CartDrawer from '../components/cart/CartDrawer';
 
 const AVG_TIME_MINS = 15;
 
 const Home = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const { shops, products, setCurrentShopId, loading: shopsLoading } = useShop();
     const { addToCart, getCartCount } = useCart();
     const [queueData, setQueueData] = useState({});
     const [staffCounts, setStaffCounts] = useState({});
     const [scrolled, setScrolled] = useState(false);
-    const [isCartOpen, setIsCartOpen] = useState(false);
+    const [activeToken, setActiveToken] = useState(null);
+    const [waitMins, setWaitMins] = useState(0);
+    const [targetDate, setTargetDate] = useState(null);
 
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -29,6 +34,114 @@ const Home = () => {
             fetchStaffCounts();
         }
     }, [shops]);
+
+    useEffect(() => {
+        if (!user) {
+            setActiveToken(null);
+            return;
+        }
+        fetchActiveToken();
+
+        const channel = supabase
+            .channel('home_token_updates')
+            .on('postgres_changes', 
+                { event: '*', schema: 'public', table: 'tokens', filter: `customer_phone=eq.${user.user_metadata?.phone}` }, 
+                () => fetchActiveToken()
+            )
+            .subscribe();
+
+        return () => supabase.removeChannel(channel);
+    }, [user, shops]);
+
+    const fetchActiveToken = async () => {
+        const phone = user?.user_metadata?.phone;
+        if (!phone) return;
+
+        const { data: token } = await supabase
+            .from('tokens')
+            .select('*, shops(name)')
+            .eq('customer_phone', phone)
+            .in('status', ['pending', 'called'])
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (token) {
+            setActiveToken(token);
+            if (token.status === 'called') {
+                setWaitMins(0);
+                setTargetDate(null);
+            } else {
+                // Fetch full queue and services for accurate sync with Profile
+                const [queueRes, servicesRes, staffRes] = await Promise.all([
+                    supabase
+                        .from('tokens')
+                        .select('id, token_number, status, called_at, preferred_staff_id, staff_id, services_selected')
+                        .eq('shop_id', token.shop_id)
+                        .in('status', ['pending', 'called'])
+                        .order('token_number', { ascending: true }),
+                    supabase
+                        .from('services')
+                        .select('id, name, avg_time')
+                        .eq('shop_id', token.shop_id),
+                    supabase
+                        .from('staff')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('shop_id', token.shop_id)
+                        .eq('is_active', true)
+                ]);
+
+                const queueData = queueRes.data || [];
+                const servicesList = servicesRes.data || [];
+                const staffCount = staffRes.count || 1;
+
+                const pendingTokens = queueData.filter(t => t.status === 'pending');
+                const calledTokens = queueData.filter(t => t.status === 'called');
+                const currentPos = pendingTokens.findIndex(t => t.id === token.id);
+
+                if (currentPos !== -1) {
+                    const getRemainingTime = (t) => {
+                        if (!t.called_at) return Date.now() + AVG_TIME_MINS * 60000;
+                        let expectedMins = AVG_TIME_MINS;
+                        if (t.services_selected && Array.isArray(t.services_selected)) {
+                            const times = t.services_selected.map(sid => {
+                                const s = servicesList.find(serv => serv.id === sid || serv.name === sid);
+                                return s ? s.avg_time : AVG_TIME_MINS;
+                            });
+                            if (times.length > 0) expectedMins = times.reduce((a, b) => a + b, 0);
+                        }
+                        return new Date(t.called_at).getTime() + expectedMins * 60000;
+                    };
+
+                    let calculatedTarget;
+                    if (token.preferred_staff_id) {
+                        const servingToken = calledTokens.find(t => t.staff_id === token.preferred_staff_id);
+                        let baseTargetTime = servingToken ? getRemainingTime(servingToken) : Date.now();
+                        const peopleAhead = pendingTokens.filter(t => 
+                            t.preferred_staff_id === token.preferred_staff_id &&
+                            t.token_number < token.token_number
+                        ).length;
+                        calculatedTarget = new Date(baseTargetTime + (peopleAhead * AVG_TIME_MINS) * 60000);
+                    } else {
+                        let earliestFree = Date.now();
+                        if (calledTokens.length >= staffCount) {
+                            earliestFree = Math.min(...calledTokens.map(t => getRemainingTime(t)));
+                        }
+                        const estimatedPos = Math.ceil((currentPos + 1) / staffCount);
+                        calculatedTarget = new Date(earliestFree + (estimatedPos * AVG_TIME_MINS) * 60000);
+                    }
+
+                    if (calculatedTarget < new Date()) calculatedTarget = new Date(Date.now() + 60000);
+                    
+                    const diffMins = Math.max(1, Math.ceil((calculatedTarget - new Date()) / 60000));
+                    setWaitMins(diffMins);
+                    setTargetDate(calculatedTarget.toISOString());
+                }
+            }
+        } else {
+            setActiveToken(null);
+        }
+    };
 
     const fetchQueueCounts = async () => {
         const { data } = await supabase
@@ -146,46 +259,131 @@ const Home = () => {
                             View Products
                         </a>
                     </div>
+
+                    {/* Integrated Active Token Bar */}
+                    <AnimatePresence>
+                        {activeToken && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                onClick={() => navigate('/profile')}
+                                style={{
+                                    marginTop: '40px',
+                                    marginLeft: 'auto',
+                                    marginRight: 'auto',
+                                    width: 'min(100%, 450px)',
+                                    background: activeToken.status === 'called' 
+                                        ? 'linear-gradient(135deg, #ef4444, #f87171)' 
+                                        : 'rgba(255, 255, 255, 0.05)',
+                                    backdropFilter: 'blur(12px)',
+                                    padding: '16px 24px',
+                                    borderRadius: '24px',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                                    <div style={{ 
+                                        width: '50px', 
+                                        height: '50px', 
+                                        borderRadius: '16px', 
+                                        background: 'rgba(255,255,255,0.1)', 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'center',
+                                        fontSize: '1.2rem',
+                                        fontWeight: '950',
+                                        color: 'white'
+                                    }}>
+                                        Q{activeToken.token_number}
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                                        <span style={{ fontSize: '0.65rem', fontWeight: '900', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '4px' }}>
+                                            {activeToken.shops?.name}
+                                        </span>
+                                        <span style={{ fontSize: '1rem', fontWeight: '900', color: 'white' }}>
+                                            {activeToken.status === 'called' ? "IT'S TRIM TIME! ⚡" : `${waitMins} MINS EST.`}
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                {activeToken.status === 'pending' && targetDate && (
+                                    <div style={{ transform: 'scale(0.6)', transformOrigin: 'right center' }}>
+                                        <CountdownTimer targetDate={targetDate} />
+                                    </div>
+                                )}
+                                
+                                {activeToken.status === 'called' && (
+                                    <motion.div
+                                        animate={{ scale: [1, 1.2, 1] }}
+                                        transition={{ duration: 1, repeat: Infinity }}
+                                        style={{ fontSize: '1.5rem' }}
+                                    >
+                                        📍
+                                    </motion.div>
+                                )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </motion.div>
                 
                 {/* Scroll Indicator */}
                 <motion.div 
                     animate={{ y: [0, 10, 0] }}
                     transition={{ duration: 2, repeat: Infinity }}
-                    style={{ position: 'absolute', bottom: '30px', color: 'white', fontSize: '1.5rem' }}
+                    style={{ position: 'absolute', bottom: '30px', color: 'white', fontSize: '1rem', opacity: 0.5 }}
                 >
-                    ↓
+                    Scroll
                 </motion.div>
             </section>
 
-            {/* Stats Section */}
-            <section style={{ padding: '80px 5%', background: '#0a0a0f' }}>
-                <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-                    gap: '40px',
-                    maxWidth: '1200px',
-                    margin: '0 auto'
-                }}>
-                    {[
-                        { label: 'Locations', value: shops.length + '+' },
-                        { label: 'Staff Members', value: '24+' },
-                        { label: 'Happy Clients', value: '15k+' },
-                        { label: 'Avg Wait Time', value: '15m' }
-                    ].map((stat, i) => (
-                        <motion.div 
-                            key={i}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            whileInView={{ opacity: 1, scale: 1 }}
-                            viewport={{ once: true }}
-                            style={{ textAlign: 'center' }}
-                        >
-                            <div style={{ fontSize: '2.5rem', fontWeight: '800', color: 'var(--primary)', marginBottom: '5px' }}>{stat.value}</div>
-                            <div style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '2px' }}>{stat.label}</div>
-                        </motion.div>
+            {/* Trust Ticker Section */}
+            <section style={{ 
+                padding: '40px 0', 
+                background: '#0a0a0f', 
+                borderTop: '1px solid rgba(255,255,255,0.05)',
+                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap'
+            }}>
+                <motion.div 
+                    initial={{ x: 0 }}
+                    animate={{ x: "-50%" }}
+                    transition={{ 
+                        duration: 30, 
+                        repeat: Infinity, 
+                        ease: "linear" 
+                    }}
+                    style={{ 
+                        display: 'inline-flex', 
+                        gap: '100px',
+                        paddingLeft: '50px'
+                    }}
+                >
+                    {[...Array(2)].map((_, idx) => (
+                        <div key={idx} style={{ display: 'flex', gap: '100px', alignItems: 'center' }}>
+                            {[
+                                { label: 'Locations', value: shops.length + '+' },
+                                { label: 'Staff Members', value: '24+' },
+                                { label: 'Happy Clients', value: '15k+' },
+                                { label: 'Avg Wait Time', value: '15m' }
+                            ].map((stat, i) => (
+                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                    <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--primary)' }}>{stat.value}</div>
+                                    <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: '600' }}>{stat.label}</div>
+                                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', marginLeft: '40px' }}></div>
+                                </div>
+                            ))}
+                        </div>
                     ))}
-                </div>
+                </motion.div>
             </section>
+
 
             {/* Shops Section */}
             <section id="shops" style={{ padding: '100px 5%' }}>
@@ -206,16 +404,18 @@ const Home = () => {
                             key={shop.id}
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
+                            whileHover={{ y: -5 }}
                             transition={{ delay: i * 0.1 }}
                             viewport={{ once: true }}
                             onClick={() => handleSelectShop(shop.id)}
                             style={{
                                 position: 'relative',
-                                borderRadius: '24px',
+                                borderRadius: '32px',
                                 overflow: 'hidden',
                                 cursor: 'pointer',
                                 height: '450px',
-                                background: '#1a1a24'
+                                background: '#1a1a24',
+                                boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
                             }}
                         >
                             <img 
@@ -234,7 +434,7 @@ const Home = () => {
                             }}>
                                 <h3 style={{ fontSize: '2rem', fontWeight: '800', color: 'white', marginBottom: '10px' }}>{shop.name}</h3>
                                 <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', marginBottom: '20px' }}>
-                                    📍 {shop.address || 'Location Details'}
+                                    {shop.address || 'Location Details'}
                                 </p>
                                 
                                 <div style={{ display: 'flex', gap: '15px' }}>
@@ -247,7 +447,7 @@ const Home = () => {
                                         color: 'white',
                                         border: '1px solid rgba(255,255,255,0.1)'
                                     }}>
-                                        👥 {queueData[shop.id] || 0} Waiting
+                                        {queueData[shop.id] || 0} Waiting
                                     </div>
                                     <div style={{ 
                                         padding: '8px 16px', 
@@ -259,7 +459,7 @@ const Home = () => {
                                         fontWeight: '700',
                                         border: '1px solid rgba(99, 102, 241, 0.3)'
                                     }}>
-                                        ⏳ {(queueData[shop.id] || 0) * AVG_TIME_MINS}m wait
+                                        {(queueData[shop.id] || 0) * AVG_TIME_MINS}m wait
                                     </div>
                                 </div>
                             </div>
@@ -275,7 +475,7 @@ const Home = () => {
                         <h2 style={{ fontSize: '2.5rem', fontWeight: '800', color: 'white', marginBottom: '15px' }}>Premium Care</h2>
                         <p style={{ color: 'rgba(255,255,255,0.5)' }}>Professional products for your daily routine.</p>
                     </div>
-                    <button style={{ color: 'var(--primary)', background: 'none', border: 'none', fontWeight: '700', cursor: 'pointer' }}>View All →</button>
+                    <button style={{ color: 'var(--primary)', background: 'none', border: 'none', fontWeight: '700', cursor: 'pointer', letterSpacing: '1px', textTransform: 'uppercase', fontSize: '0.8rem' }}>View All</button>
                 </div>
 
                 <div style={{ 
@@ -290,13 +490,15 @@ const Home = () => {
                             key={product.id}
                             initial={{ opacity: 0, scale: 0.95 }}
                             whileInView={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: i * 0.05 }}
+                            whileHover={{ y: -10, scale: 1.02 }}
                             viewport={{ once: true }}
                             style={{
-                                background: '#161621',
-                                borderRadius: '24px',
-                                padding: '15px',
-                                border: '1px solid rgba(255,255,255,0.05)'
+                                background: '#0f0f14',
+                                borderRadius: '32px',
+                                padding: '20px',
+                                border: '1px solid rgba(255,255,255,0.03)',
+                                transition: 'all 0.3s ease',
+                                cursor: 'pointer'
                             }}
                         >
                             <div style={{ 
@@ -315,28 +517,34 @@ const Home = () => {
                             <div style={{ padding: '0 10px 10px' }}>
                                 <div style={{ fontSize: '1.2rem', fontWeight: '700', color: 'white', marginBottom: '5px' }}>{product.name}</div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--primary)' }}>₹{product.price}</div>
-                                    <div style={{ fontSize: '0.8rem', color: product.stock > 0 ? '#4caf50' : '#f44336' }}>
-                                        {product.stock > 0 ? '● In Stock' : '○ Out of Stock'}
+                                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'white' }}>₹{product.price}</div>
+                                    <div style={{ 
+                                        fontSize: '0.7rem', 
+                                        color: product.stock > 0 ? 'var(--primary)' : '#f44336',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '1px',
+                                        fontWeight: '700'
+                                    }}>
+                                        {product.stock > 0 ? 'Available' : 'Sold Out'}
                                     </div>
                                 </div>
                             </div>
                             <button 
-                                onClick={() => addToCart(product)}
+                                onClick={(e) => { e.stopPropagation(); addToCart(product); }}
                                 style={{
                                     width: '100%',
                                     marginTop: '20px',
-                                    padding: '12px',
-                                    background: 'rgba(255,255,255,0.05)',
-                                    color: 'white',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    borderRadius: '12px',
-                                    fontWeight: '600',
+                                    padding: '16px',
+                                    background: 'white',
+                                    color: 'black',
+                                    border: 'none',
+                                    borderRadius: '16px',
+                                    fontWeight: '700',
                                     cursor: 'pointer',
-                                    transition: 'all 0.2s'
+                                    transition: 'all 0.3s ease'
                                 }}
-                                onMouseOver={(e) => e.target.style.background = 'var(--primary)'}
-                                onMouseOut={(e) => e.target.style.background = 'rgba(255,255,255,0.05)'}
+                                onMouseOver={(e) => e.target.style.transform = 'scale(1.02)'}
+                                onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
                             >
                                 Add to Cart
                             </button>
@@ -345,58 +553,11 @@ const Home = () => {
                 </div>
             </section>
 
-            {/* Floating Cart Button */}
-            <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setIsCartOpen(true)}
-                style={{
-                    position: 'fixed',
-                    bottom: '30px',
-                    right: '30px',
-                    width: '60px',
-                    height: '60px',
-                    borderRadius: '30px',
-                    background: 'var(--primary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    boxShadow: '0 10px 20px rgba(99, 102, 241, 0.4)',
-                    zIndex: 100
-                }}
-            >
-                <span style={{ fontSize: '1.5rem' }}>🛒</span>
-                {getCartCount() > 0 && (
-                    <div style={{
-                        position: 'absolute',
-                        top: '-5px',
-                        right: '-5px',
-                        background: '#ff4d4d',
-                        color: 'white',
-                        borderRadius: '50%',
-                        width: '24px',
-                        height: '24px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '0.8rem',
-                        fontWeight: '800',
-                        border: '2px solid var(--background)'
-                    }}>
-                        {getCartCount()}
-                    </div>
-                )}
-            </motion.div>
-
-            <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
 
             {/* Footer */}
             <footer style={{ padding: '80px 5%', borderTop: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
                 <div style={{ fontSize: '1.5rem', fontWeight: '800', color: 'white', marginBottom: '20px' }}>
-                    VELOURA<span style={{ color: 'var(--primary)' }}>.</span>
+                    TRIMTIME<span style={{ color: 'var(--primary)' }}>.</span>
                 </div>
                 <p style={{ color: 'rgba(255,255,255,0.4)', maxWidth: '400px', margin: '0 auto 40px' }}>
                     Premium grooming and queue management system for modern establishments.
@@ -408,7 +569,7 @@ const Home = () => {
                     <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>i</div>
                 </div>
                 <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.2)' }}>
-                    © 2026 Veloura Queue Systems. All rights reserved.
+                    © 2026 TrimTime Queue Systems. All rights reserved.
                 </div>
             </footer>
         </div>

@@ -12,10 +12,13 @@ import TimerDemo from './pages/TimerDemo.jsx';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import Checkout from './pages/Checkout';
+import ScrollToTop from './components/common/ScrollToTop';
 
 const AdminRoute = ({ children }) => {
   const { user, role, loading } = useAuth();
-  if (loading) return null;
+  // Only block if we are loading AND don't have a role yet
+  if (loading && !role) return null;
+  
   if (role === 'error') return (
     <div style={{ padding: '40px', textAlign: 'center' }}>
       <h2 style={{ color: '#c62828' }}>⚠️ Connection issue</h2>
@@ -29,7 +32,9 @@ const AdminRoute = ({ children }) => {
 
 const ShopRoute = ({ children }) => {
   const { user, role, loading } = useAuth();
-  if (loading) return <div>Loading...</div>;
+  // Only block if we are loading AND don't have a role yet
+  if (loading && !role) return <div style={{ padding: '20px', textAlign: 'center' }}>Loading...</div>;
+  
   if (role === 'error') return <div style={{ padding: '20px', color: 'red' }}>⚠️ Connection error. Please refresh.</div>;
   if (!user || role !== 'shop_owner') return <Navigate to="/login" />;
   return children;
@@ -37,16 +42,18 @@ const ShopRoute = ({ children }) => {
 
 const FallbackRoute = () => {
   const { user, role, loading } = useAuth();
-  if (loading) return <div>Loading...</div>;
+  if (loading && !role) return <div style={{ padding: '20px', textAlign: 'center' }}>Loading...</div>;
+  
   if (!user) return <Navigate to="/login" />;
   if (role === 'super_admin') return <Navigate to="/admin" />;
   if (role === 'shop_owner') return <Navigate to="/app" />;
-  return <Navigate to="/login" />;
+  return <Navigate to="/" />;
 };
 
 function App() {
   return (
     <AuthProvider>
+      <ScrollToTop />
       <CartProvider>
         <MainLayout>
         <Routes>

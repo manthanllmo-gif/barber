@@ -13,10 +13,12 @@ const NAV_ITEMS = [
 
 const S = {
     shell: { display: 'flex', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: '#f7f7fb' },
-    sidebar: {
+    sidebar: (isOpen) => ({
         width: '220px', backgroundColor: '#1a1a2e', color: '#ccc', padding: '24px 0',
         display: 'flex', flexDirection: 'column', flexShrink: 0,
-    },
+        transition: 'all 0.3s ease',
+        zIndex: 1000,
+    }),
     sidebarBrand: { padding: '0 20px 24px', fontSize: '18px', fontWeight: 700, color: '#fff', borderBottom: '1px solid #2d2d4e' },
     sidebarBrandSub: { fontSize: '11px', color: '#999', fontWeight: 400, marginTop: '2px', display: 'block' },
     navItem: (active) => ({
@@ -32,28 +34,71 @@ const S = {
         width: '100%', padding: '10px 0', backgroundColor: '#b71c1c', color: '#fff',
         border: 'none', borderRadius: '7px', cursor: 'pointer', fontSize: '13px', fontWeight: 600,
     },
-    content: { flex: 1, overflow: 'auto' },
+    content: { flex: 1, overflow: 'auto', minWidth: 0 },
     topBar: {
         backgroundColor: '#fff', borderBottom: '1px solid #eee', padding: '14px 28px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+        position: 'sticky', top: 0, zIndex: 900,
     },
-    topBarTitle: { fontSize: '16px', fontWeight: 600, color: '#000000', margin: 0 },
+    topBarTitle: { fontSize: '16px', fontWeight: 600, color: '#000000', margin: 0, display: 'flex', alignItems: 'center', gap: '12px' },
     topBarUser: { fontSize: '13px', color: '#000000' },
+    hamburger: {
+        background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', padding: '4px',
+        display: 'none', // Hidden on desktop
+    }
 };
 
 const AdminDashboard = () => {
     const { user, logout } = useAuth();
     const [activeTab, setActiveTab] = useState('shops');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     const ActiveComponent = NAV_ITEMS.find(n => n.id === activeTab)?.component;
 
+    const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
     return (
         <div style={S.shell}>
+            <style>{`
+                @media (max-width: 768px) {
+                    .admin-sidebar {
+                        position: fixed !important;
+                        left: -220px !important;
+                        top: 0;
+                        bottom: 0;
+                    }
+                    .admin-sidebar.open {
+                        left: 0 !important;
+                        box-shadow: 10px 0 20px rgba(0,0,0,0.2);
+                    }
+                    .admin-hamburger {
+                        display: block !important;
+                    }
+                    .admin-topbar {
+                        padding: 14px 16px !important;
+                    }
+                    .admin-user-email {
+                        display: none;
+                    }
+                    .admin-overlay {
+                        position: fixed;
+                        inset: 0;
+                        background: rgba(0,0,0,0.4);
+                        z-index: 950;
+                    }
+                }
+            `}</style>
+
+            {/* Sidebar Overlay (Mobile) */}
+            {isSidebarOpen && (
+                <div className="admin-overlay" onClick={() => setIsSidebarOpen(false)} />
+            )}
+
             {/* ── Sidebar ── */}
-            <aside style={S.sidebar}>
+            <aside className={`admin-sidebar ${isSidebarOpen ? 'open' : ''}`} style={S.sidebar(isSidebarOpen)}>
                 <div style={S.sidebarBrand}>
-                    🛎️ TokenQ Admin
+                    🛎️ TrimTime Admin
                     <span style={S.sidebarBrandSub}>Super Admin Panel</span>
                 </div>
 
@@ -62,7 +107,10 @@ const AdminDashboard = () => {
                         <div
                             key={item.id}
                             style={S.navItem(activeTab === item.id)}
-                            onClick={() => setActiveTab(item.id)}
+                            onClick={() => {
+                                setActiveTab(item.id);
+                                setIsSidebarOpen(false); // Close on mobile after click
+                            }}
                         >
                             {item.label}
                         </div>
@@ -78,21 +126,33 @@ const AdminDashboard = () => {
 
             {/* ── Main content ── */}
             <main style={S.content}>
-                <header style={S.topBar}>
-                    <p style={S.topBarTitle}>
+                <header style={S.topBar} className="admin-topbar">
+                    <div style={S.topBarTitle}>
+                        <button 
+                            className="admin-hamburger" 
+                            style={S.hamburger} 
+                            onClick={toggleSidebar}
+                        >
+                            ☰
+                        </button>
                         {NAV_ITEMS.find(n => n.id === activeTab)?.label ?? 'Dashboard'}
-                    </p>
-                    <span style={S.topBarUser}>Logged in as: {user?.email}</span>
+                    </div>
+                    <span style={S.topBarUser} className="admin-user-email">
+                        Logged in as: {user?.email}
+                    </span>
                 </header>
 
-                {ActiveComponent ? <ActiveComponent /> : (
-                    <div style={{ padding: '40px', color: '#000000', textAlign: 'center' }}>
-                        🚧 This section is coming soon.
-                    </div>
-                )}
+                <div style={{ position: 'relative' }}>
+                    {ActiveComponent ? <ActiveComponent /> : (
+                        <div style={{ padding: '40px', color: '#000000', textAlign: 'center' }}>
+                            🚧 This section is coming soon.
+                        </div>
+                    )}
+                </div>
             </main>
         </div>
     );
 };
 
 export default AdminDashboard;
+

@@ -29,7 +29,6 @@ const Signup = () => {
         setLoading(true);
         try {
             await signup(phone, password, name);
-            navigate('/');
         } catch (err) {
             setError(err.message);
         } finally {
@@ -38,69 +37,158 @@ const Signup = () => {
     };
 
     return (
-        <div style={{ padding: '40px 20px', maxWidth: '400px', margin: '80px auto', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
-            <h1 style={{ textAlign: 'center', marginBottom: '10px', color: '#2c3e50' }}>Create Account</h1>
-            <p style={{ textAlign: 'center', marginBottom: '30px', color: '#7f8c8d' }}>Join the transparent queue system</p>
-
-            {error && (
-                <div style={{ backgroundColor: '#ffebee', color: '#c62828', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px' }}>
-                    {error}
-                </div>
-            )}
-
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#495057' }}>Full Name</label>
-                    <input
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                        style={{ width: '100%', padding: '12px', border: '1px solid #ced4da', borderRadius: '8px', boxSizing: 'border-box' }}
-                        placeholder="John Doe"
-                    />
-                </div>
-                <div>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#495057' }}>Phone Number</label>
-                    <input
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        required
-                        style={{ width: '100%', padding: '12px', border: '1px solid #ced4da', borderRadius: '8px', boxSizing: 'border-box' }}
-                        placeholder="10-digit mobile number"
-                    />
-                </div>
-                <div>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#495057' }}>Create Password</label>
-                    <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        style={{ width: '100%', padding: '12px', border: '1px solid #ced4da', borderRadius: '8px', boxSizing: 'border-box' }}
-                        placeholder="••••••••"
-                    />
-                </div>
-                <button
-                    type="submit"
-                    disabled={loading}
+        <div style={{ 
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: 'calc(100vh - 80px)', 
+            padding: '20px',
+            boxSizing: 'border-box'
+        }}>
+            <div style={{ 
+                padding: '40px', 
+                width: '100%',
+                maxWidth: '400px', 
+                backgroundColor: '#161621', 
+                borderRadius: '32px', 
+                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+                position: 'relative',
+                border: '1px solid rgba(255,255,255,0.08)'
+            }}>
+                <button 
+                    onClick={() => navigate('/')}
                     style={{
-                        padding: '14px',
-                        backgroundColor: '#2ecc71',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '8px',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        cursor: loading ? 'not-allowed' : 'pointer'
+                        position: 'absolute',
+                        top: '20px',
+                        right: '20px',
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        backgroundColor: 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        fontSize: '14px',
+                        color: 'rgba(255,255,255,0.4)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s ease',
+                    }}
+                    onMouseOver={(e) => {
+                        e.target.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                        e.target.style.color = '#fff';
+                    }}
+                    onMouseOut={(e) => {
+                        e.target.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                        e.target.style.color = 'rgba(255,255,255,0.4)';
                     }}
                 >
-                    {loading ? 'Creating Account...' : 'Sign Up'}
+                    ✕
                 </button>
-            </form>
-            <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '14px', color: '#7f8c8d' }}>
-                Already have an account? <span onClick={() => navigate('/login')} style={{ color: '#1565c0', cursor: 'pointer', fontWeight: 'bold' }}>Sign In</span>
+
+                <h1 style={{ textAlign: 'center', marginBottom: '8px', color: 'white', fontSize: '1.8rem', fontWeight: '800' }}>Create Account</h1>
+                <p style={{ textAlign: 'center', marginBottom: '32px', color: 'rgba(255,255,255,0.5)', fontSize: '0.95rem' }}>Join the TrimTime community</p>
+
+                {error && (
+                    <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '12px', borderRadius: '12px', marginBottom: '20px', fontSize: '14px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                        {error}
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>Full Name</label>
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            required
+                            style={{ 
+                                width: '100%', 
+                                padding: '14px', 
+                                backgroundColor: 'rgba(255,255,255,0.03)',
+                                border: '1px solid rgba(255,255,255,0.08)', 
+                                borderRadius: '16px', 
+                                boxSizing: 'border-box', 
+                                color: 'white',
+                                outline: 'none',
+                                transition: 'border-color 0.2s'
+                            }}
+                            onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+                            onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
+                            placeholder="John Doe"
+                        />
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>Phone Number</label>
+                        <input
+                            type="tel"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            required
+                            style={{ 
+                                width: '100%', 
+                                padding: '14px', 
+                                backgroundColor: 'rgba(255,255,255,0.03)',
+                                border: '1px solid rgba(255,255,255,0.08)', 
+                                borderRadius: '16px', 
+                                boxSizing: 'border-box', 
+                                color: 'white',
+                                outline: 'none',
+                                transition: 'border-color 0.2s'
+                            }}
+                            onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+                            onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
+                            placeholder="10-digit mobile number"
+                        />
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>Create Password</label>
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            style={{ 
+                                width: '100%', 
+                                padding: '14px', 
+                                backgroundColor: 'rgba(255,255,255,0.03)',
+                                border: '1px solid rgba(255,255,255,0.08)', 
+                                borderRadius: '16px', 
+                                boxSizing: 'border-box', 
+                                color: 'white',
+                                outline: 'none',
+                                transition: 'border-color 0.2s'
+                            }}
+                            onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+                            onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
+                            placeholder="••••••••"
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        style={{
+                            padding: '16px',
+                            backgroundColor: '#2ecc71',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '16px',
+                            fontSize: '1rem',
+                            fontWeight: '700',
+                            cursor: loading ? 'not-allowed' : 'pointer',
+                            marginTop: '10px',
+                            transition: 'transform 0.2s'
+                        }}
+                        onMouseOver={(e) => !loading && (e.target.style.transform = 'scale(1.02)')}
+                        onMouseOut={(e) => !loading && (e.target.style.transform = 'scale(1)')}
+                    >
+                        {loading ? 'Creating Account...' : 'Sign Up'}
+                    </button>
+                </form>
+                <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '14px', color: 'rgba(255,255,255,0.4)' }}>
+                    Already have an account? <span onClick={() => navigate('/login')} style={{ color: 'var(--primary)', cursor: 'pointer', fontWeight: '700' }}>Sign In</span>
+                </div>
             </div>
         </div>
     );

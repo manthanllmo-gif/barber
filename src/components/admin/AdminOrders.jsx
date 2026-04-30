@@ -64,8 +64,41 @@ const AdminOrders = () => {
     }
 
     return (
-        <div style={{ padding: '28px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <div className="admin-page-container" style={{ padding: '28px' }}>
+            <style>{`
+                @media (max-width: 768px) {
+                    .admin-page-container {
+                        padding: 16px !important;
+                    }
+                    .responsive-table-container {
+                        padding: 16px !important;
+                    }
+                    .order-header {
+                        flex-direction: column;
+                        align-items: flex-start !important;
+                        gap: 12px;
+                    }
+                    .order-card-header {
+                        flex-direction: column;
+                        gap: 16px;
+                    }
+                    .order-card-header-right {
+                        text-align: left !important;
+                    }
+                    .order-details-grid {
+                        grid-template-columns: 1fr !important;
+                        gap: 16px !important;
+                    }
+                    .order-actions {
+                        flex-direction: column;
+                        width: 100%;
+                    }
+                    .order-actions button {
+                        width: 100%;
+                    }
+                }
+            `}</style>
+            <div className="order-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 800, color: '#1a1a2e' }}>Global Product Orders</h2>
                 <button 
                     onClick={fetchOrders}
@@ -92,7 +125,7 @@ const AdminOrders = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     {orders.map(order => (
                         <div key={order.id} style={{ background: '#fff', border: '1px solid #eee', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                            <div className="order-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                                 <div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                         <span style={{ fontWeight: '800', fontSize: '18px', color: '#1a1a2e' }}>Order #{order.id.slice(0, 8)}</span>
@@ -116,13 +149,13 @@ const AdminOrders = () => {
                                         {new Date(order.created_at).toLocaleString()}
                                     </div>
                                 </div>
-                                <div style={{ textAlign: 'right' }}>
+                                <div className="order-card-header-right" style={{ textAlign: 'right' }}>
                                     <div style={{ fontSize: '12px', color: '#888' }}>Total Amount</div>
                                     <div style={{ fontSize: '20px', fontWeight: '800', color: '#2e7d32' }}>₹{order.total_amount.toLocaleString()}</div>
                                 </div>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '20px' }}>
+                            <div className="order-details-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '20px' }}>
                                 <div style={{ background: '#f8f9fa', borderRadius: '12px', padding: '16px' }}>
                                     <div style={{ fontSize: '11px', fontWeight: '800', color: '#000000', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Customer</div>
                                     <div style={{ fontWeight: '600', color: '#000000' }}>{order.customer_name}</div>
@@ -143,7 +176,7 @@ const AdminOrders = () => {
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                            <div className="order-actions" style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                                 {order.status === 'pending' && (
                                     <button 
                                         onClick={() => updateOrderStatus(order.id, 'confirmed')}

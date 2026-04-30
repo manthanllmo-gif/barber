@@ -1,6 +1,6 @@
-# Design System: Lachak Premium
+# Design System: TrimTime Premium
 
-This document defines the visual language and design tokens for the Lachak Queue Management System.
+This document defines the visual language and design tokens for the TrimTime Queue Management System.
 
 ## Visual Identity
 **Vibe**: Premium SaaS, Minimalist, High-Contrast, Professional, and Trustworthy.

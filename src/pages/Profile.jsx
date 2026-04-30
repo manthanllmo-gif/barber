@@ -31,18 +31,18 @@ const S = {
         gap: '8px',
     },
     userName: {
-        fontSize: '2.5rem',
+        fontSize: '2rem',
         fontWeight: '900',
-        letterSpacing: '-1px',
+        letterSpacing: '-0.5px',
         margin: 0,
         color: 'white',
         fontFamily: 'var(--font-heading)',
     },
     userPhone: {
-        fontSize: '1rem',
+        fontSize: '0.9rem',
         color: 'rgba(255, 255, 255, 0.4)',
-        fontWeight: '500',
-        letterSpacing: '1px',
+        fontWeight: '600',
+        letterSpacing: '0.5px',
     },
     logoutBtn: {
         padding: '12px 24px',
@@ -70,31 +70,32 @@ const S = {
     },
     tokenGrid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
         gap: '20px',
         marginBottom: '60px',
     },
     tokenCard: {
         background: 'rgba(255, 255, 255, 0.02)',
-        borderRadius: '20px',
+        borderRadius: '24px',
         border: '1px solid rgba(255, 255, 255, 0.08)',
-        padding: '16px',
+        padding: '24px',
         position: 'relative',
         overflow: 'hidden',
     },
     tokenHeader: {
-        marginBottom: '16px',
+        marginBottom: '20px',
         borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-        paddingBottom: '12px',
+        paddingBottom: '20px',
+        textAlign: 'center',
     },
     shopName: {
-        fontSize: '0.9rem',
-        fontWeight: '800',
+        fontSize: '1.5rem',
+        fontWeight: '900',
         color: 'white',
-        margin: '0 0 2px 0',
+        margin: '0 0 4px 0',
     },
     shopAddress: {
-        fontSize: '0.65rem',
+        fontSize: '0.9rem',
         color: 'rgba(255,255,255,0.4)',
         margin: 0,
     },
@@ -105,18 +106,19 @@ const S = {
         gap: '12px',
     },
     tokenNumber: {
-        fontSize: '2rem',
+        fontSize: '2.5rem',
         fontWeight: '950',
         color: 'var(--primary)',
         letterSpacing: '-1px',
         lineHeight: 1,
-        margin: '2px 0',
+        margin: '4px 0',
     },
     historyBox: {
         background: 'rgba(255, 255, 255, 0.02)',
         borderRadius: '32px',
         border: '1px solid rgba(255, 255, 255, 0.08)',
-        overflow: 'hidden',
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch',
     },
     table: {
         width: '100%',
@@ -138,6 +140,7 @@ const S = {
         color: 'white',
         fontSize: '0.95rem',
         borderBottom: '1px solid rgba(255,255,255,0.03)',
+        whiteSpace: 'nowrap',
     }
 };
 
@@ -147,6 +150,7 @@ const TokenWaitTimer = ({ token }) => {
     const [nowServing, setNowServing] = useState([]);
     const [preferredStaff, setPreferredStaff] = useState(null);
     const [isStaffServing, setIsStaffServing] = useState(false);
+    const [position, setPosition] = useState(0);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -174,9 +178,10 @@ const TokenWaitTimer = ({ token }) => {
                 
                 setNowServing(calledTokens.map(t => t.token_number));
 
-                const position = pendingTokens.findIndex(t => t.id === token.id);
+                const currentPos = pendingTokens.findIndex(t => t.id === token.id);
+                setPosition(currentPos);
                 
-                if (position === -1 && token.status !== 'called') {
+                if (currentPos === -1 && token.status !== 'called') {
                     setWaitMins(0);
                     setTargetDate(null);
                     return;
@@ -245,7 +250,7 @@ const TokenWaitTimer = ({ token }) => {
                         earliestFree = Math.min(...finishTimes);
                     }
                     
-                    const estimatedPos = Math.ceil((position + 1) / effectiveStaff);
+                    const estimatedPos = Math.ceil((currentPos + 1) / effectiveStaff);
                     calculatedTarget = new Date(earliestFree + (estimatedPos * AVG_TIME_MINS) * 60000);
                 }
 
@@ -295,8 +300,8 @@ const TokenWaitTimer = ({ token }) => {
                 boxShadow: '0 10px 30px rgba(99, 102, 241, 0.3)',
                 animation: 'pulse 2s infinite'
             }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>🔔</div>
-                <div style={{ fontSize: '0.9rem', fontWeight: '900', color: 'white', textTransform: 'uppercase', letterSpacing: '2px' }}>Proceed to Counter</div>
+                <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>⚡</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: '900', color: 'white', textTransform: 'uppercase', letterSpacing: '2px' }}>It's Trim Time!</div>
                 {preferredStaff && (
                     <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.8)', marginTop: '8px', fontWeight: '800' }}>
                         Requested Barber: {preferredStaff.name}
@@ -307,57 +312,43 @@ const TokenWaitTimer = ({ token }) => {
     }
 
     return (
-        <div style={{ width: '100%', marginTop: '10px' }}>
-            <div style={{ padding: '20px', background: 'rgba(255,255,255,0.03)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '15px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '0.65rem', fontWeight: '900', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Arrival Estimate</span>
-                        <span style={{ fontSize: '1.25rem', fontWeight: '950', color: 'white' }}>{waitMins} MINS</span>
-                    </div>
-                    <CountdownTimer targetDate={targetDate} />
+        <div style={{ width: '100%', marginTop: '15px' }}>
+            {/* Top Grid: Estimate & Timer */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'rgba(255,255,255,0.05)', borderRadius: '16px', overflow: 'hidden', marginBottom: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', textAlign: 'center', height: '80px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', fontWeight: '900', letterSpacing: '1px', marginBottom: '2px' }}>Arrival Estimate</div>
+                    <div style={{ fontSize: '1rem', fontWeight: '900', color: 'white' }}>{waitMins} MINS</div>
                 </div>
-
-                {preferredStaff && (
-                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                <span style={{ fontSize: '0.65rem', fontWeight: '800', color: 'var(--primary)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Requested Barber</span>
-                                <span style={{ fontSize: '0.95rem', fontWeight: '700', color: 'white' }}>{preferredStaff.name}</span>
-                            </div>
-                            <div style={{ 
-                                padding: '4px 10px', 
-                                borderRadius: '8px', 
-                                fontSize: '0.65rem', 
-                                fontWeight: '900',
-                                background: isStaffServing ? 'rgba(16, 185, 129, 0.1)' : 'rgba(99, 102, 241, 0.1)',
-                                color: isStaffServing ? '#10b981' : '#6366f1',
-                                border: `1px solid ${isStaffServing ? 'rgba(16, 185, 129, 0.2)' : 'rgba(99, 102, 241, 0.2)'}`,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '5px'
-                            }}>
-                                <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'currentColor', boxShadow: '0 0 8px currentColor' }}></span>
-                                {isStaffServing ? 'IN SERVICE' : 'ONLINE • READY'}
-                            </div>
-                        </div>
+                <div style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80px', overflow: 'hidden' }}>
+                    <div style={{ transform: 'scale(0.6)', transformOrigin: 'center center' }}>
+                        <CountdownTimer targetDate={targetDate} />
                     </div>
-                )}
+                </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'rgba(255,255,255,0.05)', borderRadius: '16px', overflow: 'hidden' }}>
-                <div style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', fontWeight: '900', letterSpacing: '1px', marginBottom: '4px' }}>Now Serving</div>
+            {/* Bottom Grid: Now Serving & Rank */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'rgba(255,255,255,0.05)', borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', textAlign: 'center', height: '80px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', fontWeight: '900', letterSpacing: '1px', marginBottom: '2px' }}>Now Serving</div>
                     <div style={{ fontSize: '1rem', fontWeight: '900', color: 'white' }}>
                         {nowServing.length > 0 ? `Q${nowServing[0]}` : '---'}
                     </div>
                 </div>
-                <div style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', fontWeight: '900', letterSpacing: '1px', marginBottom: '4px' }}>Queue Rank</div>
+                <div style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', textAlign: 'center', height: '80px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', fontWeight: '900', letterSpacing: '1px', marginBottom: '2px' }}>Queue Rank</div>
                     <div style={{ fontSize: '1rem', fontWeight: '900', color: 'var(--primary)' }}>
                         #{Math.max(1, position + 1)}
                     </div>
                 </div>
             </div>
+
+            {preferredStaff && (
+                <div style={{ marginTop: '8px', textAlign: 'center' }}>
+                    <span style={{ fontSize: '0.6rem', fontWeight: '800', color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                        Barber: {preferredStaff.name}
+                    </span>
+                </div>
+            )}
         </div>
     );
 };
@@ -368,12 +359,35 @@ const Profile = () => {
     const [tokens, setTokens] = useState([]);
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [profile, setProfile] = useState({ name: '', phone: '' });
 
     useEffect(() => {
-        if (user) {
-            fetchUserTokens();
-            fetchUserOrders();
-        }
+        if (!user) return;
+
+        const fetchProfile = async () => {
+            // Try metadata first
+            let name = user.user_metadata?.name;
+            let phone = user.user_metadata?.phone;
+
+            if (!name) {
+                // Fallback to DB
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('name, phone')
+                    .eq('id', user.id)
+                    .maybeSingle();
+                
+                if (data) {
+                    name = data.name;
+                    phone = data.phone;
+                }
+            }
+            setProfile({ name: name || 'Guest User', phone: phone || '' });
+        };
+
+        fetchProfile();
+        fetchUserTokens();
+        fetchUserOrders();
     }, [user]);
 
     const fetchUserTokens = async () => {
@@ -427,16 +441,43 @@ const Profile = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             style={S.container}
+            className="profile-container"
         >
+            <style>{`
+                    .empty-state-box {
+                        padding: 60px;
+                    }
+                    @media (max-width: 768px) {
+                        .responsive-table th, 
+                        .responsive-table td {
+                            padding: 12px 16px !important;
+                            font-size: 0.8rem !important;
+                        }
+                        .profile-header {
+                            padding: 24px !important;
+                            flex-direction: column !important;
+                            align-items: flex-start !important;
+                            gap: 20px !important;
+                            margin-bottom: 30px !important;
+                        }
+                        .profile-container {
+                            padding: 100px 16px 100px !important;
+                        }
+                        .empty-state-box {
+                            padding: 40px 20px !important;
+                        }
+                    }
+                `}</style>
             {/* Header Section */}
             <motion.div 
                 initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 style={S.header}
+                className="profile-header"
             >
                 <div style={S.titleGroup}>
-                    <h1 style={S.userName}>{user.user_metadata?.name || 'User Profile'}</h1>
-                    <span style={S.userPhone}>+91 {user.user_metadata?.phone}</span>
+                    <h1 style={S.userName}>{profile.name}</h1>
+                    {profile.phone && <span style={S.userPhone}>+91 {profile.phone}</span>}
                 </div>
                 <motion.button 
                     whileHover={{ scale: 1.05, backgroundColor: 'rgba(255, 77, 77, 0.1)' }}
@@ -455,8 +496,9 @@ const Profile = () => {
             <div style={{ marginBottom: '40px' }}>
                 <h2 style={S.sectionTitle}>
                     <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--primary)', display: 'inline-block' }}></span>
-                    Active Bookings
+                    Live Tokens
                 </h2>
+                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', marginTop: '-25px', marginBottom: '25px', fontWeight: '600' }}>Your current active TrimTime sessions</p>
                 
                 <div style={S.tokenGrid}>
                     <AnimatePresence mode="popLayout">
@@ -464,7 +506,8 @@ const Profile = () => {
                             <motion.div 
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                style={{ gridColumn: '1/-1', padding: '60px', textAlign: 'center', background: 'rgba(255,255,255,0.01)', borderRadius: '32px', border: '1px dashed rgba(255,255,255,0.1)' }}
+                                className="empty-state-box"
+                                style={{ gridColumn: '1/-1', textAlign: 'center', background: 'rgba(255,255,255,0.01)', borderRadius: '32px', border: '1px dashed rgba(255,255,255,0.1)' }}
                             >
                                 <p style={{ color: 'rgba(255,255,255,0.3)', fontWeight: '600', letterSpacing: '1px' }}>NO ACTIVE QUEUE TOKENS FOUND</p>
                             </motion.div>
@@ -482,11 +525,21 @@ const Profile = () => {
                                         <p style={S.shopAddress}>{token.shops?.address}</p>
                                     </div>
 
-                                    <div style={S.tokenBody}>
-                                        <div style={{ textAlign: 'center' }}>
-                                            <span style={{ fontSize: '0.7rem', fontWeight: '900', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '3px' }}>Your Token</span>
-                                            <div style={S.tokenNumber}>Q{token.token_number}</div>
-                                        </div>
+                                        <div style={S.tokenBody}>
+                                            <div style={{ textAlign: 'center', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                                                <div style={{ 
+                                                    padding: '6px 16px', 
+                                                    background: 'rgba(255,255,255,0.08)', 
+                                                    borderRadius: '12px', 
+                                                    fontSize: '1rem', 
+                                                    fontWeight: '900', 
+                                                    color: 'var(--primary)', 
+                                                    letterSpacing: '2px',
+                                                    border: '1px solid rgba(255,255,255,0.05)',
+                                                    marginBottom: '4px'
+                                                }}>TRIMTIME</div>
+                                                <div style={S.tokenNumber}>Q{token.token_number}</div>
+                                            </div>
                                         
                                         {token.status === 'pending' && <TokenWaitTimer token={token} />}
                                         
@@ -494,9 +547,9 @@ const Profile = () => {
                                             <motion.div 
                                                 animate={{ scale: [1, 1.02, 1] }}
                                                 transition={{ repeat: Infinity, duration: 2 }}
-                                                style={{ padding: '16px 32px', background: 'var(--primary)', color: 'white', borderRadius: '20px', fontWeight: '900', letterSpacing: '1px', fontSize: '0.9rem', boxShadow: '0 0 30px rgba(99, 102, 241, 0.4)' }}
+                                                style={{ padding: '16px 32px', background: 'var(--primary)', color: 'white', borderRadius: '20px', fontWeight: '900', letterSpacing: '1px', fontSize: '0.9rem', boxShadow: '0 0 30px rgba(99, 102, 241, 0.4)', textAlign: 'center' }}
                                             >
-                                                🔔 PROCEED TO COUNTER
+                                                ⚡ IT'S TRIM TIME!
                                             </motion.div>
                                         )}
 
@@ -518,13 +571,13 @@ const Profile = () => {
             >
                 <h2 style={S.sectionTitle}>
                     <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'inline-block' }}></span>
-                    Session History
+                    Past Tokens
                 </h2>
                 <div style={S.historyBox}>
                     {pastTokens.length === 0 ? (
                         <div style={{ padding: '40px', textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontWeight: '600' }}>NO PAST SESSIONS RECORDED</div>
                     ) : (
-                        <table style={S.table}>
+                        <table style={S.table} className="responsive-table">
                             <thead>
                                 <tr>
                                     <th style={S.th}>Token</th>
@@ -582,7 +635,7 @@ const Profile = () => {
                     {orders.length === 0 ? (
                         <div style={{ padding: '40px', textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontWeight: '600' }}>NO ORDERS PLACED YET</div>
                     ) : (
-                        <table style={S.table}>
+                        <table style={S.table} className="responsive-table">
                             <thead>
                                 <tr>
                                     <th style={S.th}>Order ID</th>

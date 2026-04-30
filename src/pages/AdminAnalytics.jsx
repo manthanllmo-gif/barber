@@ -126,11 +126,25 @@ const AdminAnalytics = () => {
     if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#000000' }}>Loading global analytics...</div>;
 
     return (
-        <div style={{ padding: '28px', maxWidth: '1000px', margin: '0 auto', fontFamily: 'Inter, system-ui, sans-serif' }}>
+        <div className="admin-page-container" style={{ padding: '24px' }}>
+            <style>{`
+                @media (max-width: 768px) {
+                    .admin-page-container {
+                        padding: 16px !important;
+                    }
+                    .overall-analytics-grid {
+                        grid-template-columns: 1fr !important;
+                    }
+                    .leaderboards-grid {
+                        grid-template-columns: 1fr !important;
+                        gap: 20px !important;
+                    }
+                }
+            `}</style>
             <h2 style={{ marginBottom: '24px', color: '#1a1a2e' }}>📊 Global Performance Analytics</h2>
 
             {/* Overall Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px' }}>
+            <div className="overall-analytics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px' }}>
                 <div style={{ padding: '20px', backgroundColor: '#e8f5e9', borderRadius: '12px', border: '1px solid #c8e6c9', textAlign: 'center' }}>
                     <div style={{ fontSize: '12px', color: '#2e7d32', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '8px' }}>Total Revenue</div>
                     <div style={{ fontSize: '28px', fontWeight: '800', color: '#1b5e20' }}>₹{data.overall.totalRevenue.toLocaleString('en-IN')}</div>
@@ -145,7 +159,7 @@ const AdminAnalytics = () => {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+            <div className="leaderboards-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
                 {/* Shop Leaderboard */}
                 <div>
                     <h3 style={{ fontSize: '18px', marginBottom: '15px', color: '#000000' }}>🏪 Shop Performance</h3>

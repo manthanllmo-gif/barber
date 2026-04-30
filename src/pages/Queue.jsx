@@ -678,7 +678,7 @@ const Queue = () => {
                                     <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ textAlign: 'center', padding: '5px 0' }}>
                                         <div style={{ fontSize: '0.55rem', color: '#4ade80', fontWeight: '800', marginBottom: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
                                             <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#4ade80' }} />
-                                            Slot Reserved
+                                            TrimTime Slot Reserved
                                         </div>
                                         
                                          <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', padding: '12px', marginBottom: '10px' }}>
@@ -732,10 +732,11 @@ const Queue = () => {
                                                 setBookingStage('idle');
                                                 setSelectedServiceIds([]);
                                                 setSelectedStaffId(null);
+                                                navigate('/profile');
                                             }}
-                                            style={{ width: '100%', padding: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'white', fontWeight: '700', fontSize: '0.65rem', cursor: 'pointer' }}
+                                            style={{ width: '100%', padding: '8px', background: 'var(--primary)', border: 'none', borderRadius: '10px', color: 'white', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)' }}
                                         >
-                                            Return to Dashboard
+                                            View My Tokens
                                         </button>
                                     </motion.div>
                                 )}
@@ -832,12 +833,96 @@ const Queue = () => {
                         >
                             <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '10px', textAlign: 'center' }}>{authMode === 'signup' ? 'Create Account' : 'Welcome Back'}</h2>
                             <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '30px' }}>Join the queue instantly with your phone.</p>
-                            
-                            <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                <input type="tel" placeholder="Phone Number" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} style={{ width: '100%', padding: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: 'white' }} />
-                                <input type="password" placeholder="Password" value={authPassword} onChange={e => setAuthPassword(e.target.value)} style={{ width: '100%', padding: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: 'white' }} />
-                                <button type="submit" style={{ width: '100%', padding: '15px', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', marginTop: '10px' }}>
-                                    {loading ? 'Processing...' : (authMode === 'signup' ? 'Sign Up' : 'Login')}
+                                   <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                {authMode === 'signup' && (
+                                    <div style={{ position: 'relative' }}>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Full Name" 
+                                            value={customerName} 
+                                            onChange={e => setCustomerName(e.target.value)} 
+                                            required
+                                            style={{ 
+                                                width: '100%', 
+                                                padding: '16px 16px 16px 45px', 
+                                                background: 'rgba(255,255,255,0.03)', 
+                                                border: '1px solid rgba(255,255,255,0.1)', 
+                                                borderRadius: '16px', 
+                                                color: 'white',
+                                                fontSize: '0.95rem',
+                                                outline: 'none',
+                                                transition: 'all 0.3s ease'
+                                            }} 
+                                        />
+                                        <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>👤</span>
+                                    </div>
+                                )}
+                                <div style={{ position: 'relative' }}>
+                                    <input 
+                                        type="tel" 
+                                        placeholder="Phone Number" 
+                                        value={customerPhone} 
+                                        onChange={e => setCustomerPhone(e.target.value)} 
+                                        required
+                                        style={{ 
+                                            width: '100%', 
+                                            padding: '16px 16px 16px 45px', 
+                                            background: 'rgba(255,255,255,0.03)', 
+                                            border: '1px solid rgba(255,255,255,0.1)', 
+                                            borderRadius: '16px', 
+                                            color: 'white',
+                                            fontSize: '0.95rem',
+                                            outline: 'none'
+                                        }} 
+                                    />
+                                    <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>📱</span>
+                                </div>
+                                <div style={{ position: 'relative' }}>
+                                    <input 
+                                        type="password" 
+                                        placeholder="Password" 
+                                        value={authPassword} 
+                                        onChange={e => setAuthPassword(e.target.value)} 
+                                        required
+                                        style={{ 
+                                            width: '100%', 
+                                            padding: '16px 16px 16px 45px', 
+                                            background: 'rgba(255,255,255,0.03)', 
+                                            border: '1px solid rgba(255,255,255,0.1)', 
+                                            borderRadius: '16px', 
+                                            color: 'white',
+                                            fontSize: '0.95rem',
+                                            outline: 'none'
+                                        }} 
+                                    />
+                                    <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>🔒</span>
+                                </div>
+
+                                {authError && (
+                                    <div style={{ color: '#ef4444', fontSize: '0.8rem', textAlign: 'center', background: 'rgba(239, 68, 68, 0.1)', padding: '8px', borderRadius: '8px', fontWeight: '600' }}>
+                                        {authError}
+                                    </div>
+                                )}
+
+                                <button 
+                                    type="submit" 
+                                    disabled={loading}
+                                    style={{ 
+                                        width: '100%', 
+                                        padding: '16px', 
+                                        background: 'linear-gradient(135deg, var(--primary), #4f46e5)', 
+                                        color: 'white', 
+                                        border: 'none', 
+                                        borderRadius: '16px', 
+                                        fontWeight: '800', 
+                                        marginTop: '10px',
+                                        fontSize: '1rem',
+                                        cursor: loading ? 'not-allowed' : 'pointer',
+                                        boxShadow: '0 10px 20px rgba(99, 102, 241, 0.2)',
+                                        transition: 'all 0.3s ease'
+                                    }}
+                                >
+                                    {loading ? 'Securing Session...' : (authMode === 'signup' ? 'Create Account' : 'Sign In')}
                                 </button>
                             </form>
                             <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '0.9rem' }}>

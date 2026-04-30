@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext({});
@@ -10,6 +10,7 @@ export const AuthProvider = ({ children }) => {
     const [role, setRole] = useState(null);
     const [shopId, setShopId] = useState(null);
     const [loading, setLoading] = useState(true);
+    const isSyncingRef = useRef(false);
 
     useEffect(() => {
         // onAuthStateChange fires immediately with INITIAL_SESSION event
@@ -17,30 +18,40 @@ export const AuthProvider = ({ children }) => {
             console.log('[Auth] event:', event, '| user:', session?.user?.email || 'none');
 
             const authUser = session?.user;
-            if (authUser) {
-                // FAST PATH: Use metadata first to unblock UI
-                const metaRole = authUser.user_metadata?.role;
-                const metaShopId = authUser.user_metadata?.shopId || authUser.user_metadata?.shop_id;
-
-                setUser(authUser);
-
-                if (metaRole) {
-                    console.log('[Auth] Using metadata: role=', metaRole);
-                    setRole(metaRole);
-                    setShopId(metaShopId);
-                    setLoading(false);
-
-                    // SYNC PATH: Update from DB in background without blocking
-                    loadUserDetails(authUser, false);
-                } else {
-                    // SLOW PATH: Wait for DB if no metadata (blocks UI)
-                    await loadUserDetails(authUser, true);
-                }
-            } else {
+            
+            if (!authUser) {
+                // Clear state if no user
                 setUser(null);
                 setRole(null);
                 setShopId(null);
                 setLoading(false);
+                return;
+            }
+
+            // Check if we already have this user to prevent redundant re-renders
+            // This is key to stopping the "auto refresh" on tab focus
+            const isSameUser = user?.id === authUser.id;
+            
+            // FAST PATH: Use metadata first
+            const metaRole = authUser.user_metadata?.role;
+            const metaShopId = authUser.user_metadata?.shopId || authUser.user_metadata?.shop_id;
+
+            // Only update if something actually changed
+            if (!isSameUser || role !== metaRole) {
+                setUser(authUser);
+                if (metaRole) {
+                    setRole(metaRole);
+                    setShopId(metaShopId);
+                    setLoading(false);
+                    // Background sync
+                    loadUserDetails(authUser, false);
+                } else {
+                    // No metadata, must wait for DB
+                    await loadUserDetails(authUser, true);
+                }
+            } else {
+                // Same user/role, just do a silent background sync if not already syncing
+                loadUserDetails(authUser, false);
             }
         });
 
@@ -49,57 +60,43 @@ export const AuthProvider = ({ children }) => {
                 authListener.subscription.unsubscribe();
             }
         };
-    }, []);
+    }, [user, role]); // Add dependencies to properly check against current state
 
     const loadUserDetails = async (authUser, blockUI = true) => {
-        if (blockUI) setLoading(true);
+        if (!authUser || isSyncingRef.current) return;
+        
+        isSyncingRef.current = true;
+        // Only block UI if we don't have a role yet or if explicitly requested
+        const shouldBlock = blockUI && !role;
+        if (shouldBlock) setLoading(true);
 
         try {
-            console.log('[Auth] Fetching from DB for id:', authUser.id);
+            console.log('[Auth] Syncing from DB for id:', authUser.id);
 
             const { data: userDetails, error } = await supabase
                 .from('users')
-                .select('role, shop_id')
+                .select('role, shop_id, name, phone')
                 .eq('id', authUser.id)
                 .maybeSingle();
 
             if (error) {
                 console.error('[Auth] DB Sync failed:', error.message);
-                if (blockUI) {
-                    setRole('error');
-                    setLoading(false);
-                }
-            } else if (!userDetails) {
-                // No DB row yet (e.g. new customer) — use auth metadata as fallback
-                const metaRole = authUser.user_metadata?.role || 'customer';
-                console.log('[Auth] No DB row found, using metadata role:', metaRole);
-                setRole(metaRole);
-                setShopId(null);
-                setLoading(false);
+                if (shouldBlock) setRole('error');
+            } else if (userDetails) {
+                // Only update if DB values differ from current state to minimize re-renders
+                if (userDetails.role !== role) setRole(userDetails.role);
+                if (userDetails.shop_id !== shopId) setShopId(userDetails.shop_id);
             } else {
-                console.log('[Auth] DB Sync success: role=', userDetails.role);
-                setRole(userDetails.role);
-                setShopId(userDetails.shop_id);
-                setLoading(false);
-
-                // SELF-HEALING: If metadata is missing or outdated, update it for the next session
-                if (userDetails.role !== authUser.user_metadata?.role ||
-                    userDetails.shop_id !== (authUser.user_metadata?.shopId || authUser.user_metadata?.shop_id)) {
-                    console.log('[Auth] Self-healing metadata...');
-                    supabase.auth.updateUser({
-                        data: {
-                            role: userDetails.role,
-                            shopId: userDetails.shop_id
-                        }
-                    });
-                }
+                // Fallback to customer if no DB record yet
+                const fallbackRole = authUser.user_metadata?.role || 'customer';
+                if (fallbackRole !== role) setRole(fallbackRole);
             }
         } catch (err) {
             console.error('[Auth] loadUserDetails unexpected error:', err.message);
-            if (blockUI) {
-                setRole('error');
-                setLoading(false);
-            }
+            if (shouldBlock) setRole('error');
+        } finally {
+            isSyncingRef.current = false;
+            setLoading(false);
         }
     };
 
@@ -158,7 +155,12 @@ export const AuthProvider = ({ children }) => {
         if (authData.user) {
             const { error: dbError } = await supabase
                 .from('users')
-                .insert([{ id: authData.user.id, role: 'customer' }]);
+                .insert([{ 
+                    id: authData.user.id, 
+                    role: 'customer',
+                    name: name,
+                    phone: phone
+                }]);
             if (dbError) console.error('Error creating user profile:', dbError.message);
         }
 
@@ -172,7 +174,7 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={{ user, role, shopId, loading, login, signup, logout }}>
-            {loading ? (
+            {loading && !role ? (
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#fafafa' }}>
                     <div style={{ textAlign: 'center', color: '#495057' }}>
                         <div style={{ fontSize: '2rem', marginBottom: '10px' }}>⏳</div>
@@ -181,6 +183,7 @@ export const AuthProvider = ({ children }) => {
                 </div>
             ) : children}
         </AuthContext.Provider>
+
     );
 };
 

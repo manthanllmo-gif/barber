@@ -577,9 +577,11 @@ select.form-input option {
 
   .premium-header {
     flex-direction: column;
-    align-items: flex-start !important;
-    gap: 12px;
-    margin-bottom: 16px !important;
+    align-items: center !important;
+    text-align: center;
+    gap: 16px;
+    margin-bottom: 24px !important;
+    width: 100%;
   }
 
   .premium-title {
@@ -587,15 +589,18 @@ select.form-input option {
   }
 
   .tab-nav {
-    width: calc(100% + 24px);
-    margin: 0 -12px;
-    overflow-x: auto;
-    display: flex;
-    white-space: nowrap;
-    padding: 8px 16px !important;
-    scrollbar-width: none;
+    width: 100%;
+    margin: 0;
+    overflow-x: hidden;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: auto auto;
+    white-space: normal;
+    padding: 6px !important;
     gap: 8px;
-    border-radius: 0;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   .tab-nav::-webkit-scrollbar {
@@ -603,9 +608,13 @@ select.form-input option {
   }
 
   .tab-btn {
-    padding: 8px 16px !important;
-    font-size: 13px !important;
-    flex-shrink: 0;
+    padding: 10px 8px !important;
+    font-size: 11px !important;
+    flex-shrink: 1;
+    width: 100%;
+    text-align: center;
+    border-radius: 12px !important;
+    text-transform: capitalize;
   }
 
   .stats-grid {

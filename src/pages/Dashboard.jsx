@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { 
     fetchStaff, 
@@ -15,7 +16,12 @@ import CountdownTimer from '../components/common/CountdownTimer';
 
 const Dashboard = () => {
     const { currentShopId } = useShop();
-    const [activeTab, setActiveTab] = useState('queue'); // 'queue', 'services', 'products', 'staff', 'analytics'
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = searchParams.get('tab') || 'queue';
+    
+    const setActiveTab = (tab) => {
+        setSearchParams({ tab });
+    };
     const [analyticsData, setAnalyticsData] = useState({
         staffMetrics: [],
         serviceMetrics: [],
@@ -784,8 +790,6 @@ const Dashboard = () => {
                                 onClick={() => setActiveTab(tab)}
                                 className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
                                 style={{ 
-                                    padding: '10px 20px', 
-                                    borderRadius: '16px',
                                     transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                                     background: activeTab === tab ? 'var(--premium-gradient)' : 'transparent',
                                     color: activeTab === tab ? 'white' : 'var(--text-muted)',

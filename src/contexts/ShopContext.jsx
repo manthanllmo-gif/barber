@@ -3,10 +3,7 @@ import { supabase } from '../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 import { useAuth } from './AuthContext';
 
-const publicClient = createClient(
-    import.meta.env.VITE_SUPABASE_URL,
-    import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+// Use the singleton client from lib/supabase to avoid multiple GoTrueClient warnings
 
 const ShopContext = createContext();
 
@@ -27,7 +24,7 @@ export const ShopProvider = ({ children }) => {
         setLoading(true);
         try {
             // Fetch Shops
-            let query = publicClient.from('shops').select('*').order('created_at', { ascending: true });
+            let query = supabase.from('shops').select('*').order('created_at', { ascending: true });
             
             // If not super_admin, only show active shops
             if (role !== 'super_admin') {
@@ -39,7 +36,7 @@ export const ShopProvider = ({ children }) => {
             setShops(shopsRes.data || []);
 
             // Fetch Products
-            const productsRes = await publicClient.from('products').select('*, shops(name)').order('created_at', { ascending: false });
+            const productsRes = await supabase.from('products').select('*, shops(name)').order('created_at', { ascending: false });
             if (productsRes.error) throw productsRes.error;
             setProducts(productsRes.data || []);
 

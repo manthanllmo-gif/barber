@@ -190,74 +190,87 @@ const PublicDisplay = () => {
             {/* Centered Info Text */}
             <main className="relative z-30 flex flex-col items-center justify-center text-center p-6 w-full max-w-6xl">
                 
-                {/* Now Serving Section */}
-                <div className="relative group mb-16 animate-token-pop">
-                    {/* Ambient Glow */}
-                    <div className="absolute inset-0 bg-purple-600/20 blur-[150px] rounded-full scale-125 animate-pulse-slow" />
-                    
-                    <div className="relative flex flex-col items-center">
-                        <span className="text-purple-400 font-bold uppercase tracking-[1em] text-xs mb-8 md:mb-12 opacity-80">Now Serving</span>
-                        
-                        {nowServing.length > 0 ? (
-                            <div className="flex flex-col items-center">
-                                <div className="flex flex-col items-center justify-center mb-8">
-                                    <div className="flex items-baseline mb-8">
-                                        <span className="text-[3.2rem] md:text-[4.8rem] text-purple-500 font-serif italic leading-none mr-2 drop-shadow-2xl">#</span>
-                                        <span className="text-[6.4rem] md:text-[9.6rem] font-black text-white leading-none tracking-tighter drop-shadow-[0_40px_80px_rgba(0,0,0,0.9)]">
-                                            {nowServing[0].token_number}
-                                        </span>
-                                    </div>
-                                    
-                                    {/* Compact Live Countdown - Centered Below */}
-                                    <div className="flex flex-col items-center justify-center p-4 bg-white/5 backdrop-blur-3xl rounded-[2rem] border border-white/5 shadow-2xl scale-110">
-                                        <CountdownTimer 
-                                            targetDate={new Date(new Date(nowServing[0].called_at || nowServing[0].created_at).getTime() + getTokenDuration(nowServing[0]) * 60000)} 
-                                            size="sm"
-                                            color="#a855f7"
-                                        />
-                                        <span className="text-[9px] font-black text-purple-400/40 mt-1 tracking-[0.3em] uppercase">Estimated Completion</span>
-                                    </div>
-                                </div>
+                {/* Brand Header */}
+                <div className="mb-12 animate-fade-in-up">
+                    <div className="flex items-center justify-center gap-4">
+                        <div className="h-[1px] w-12 bg-gradient-to-r from-transparent to-purple-500/50" />
+                        <span className="text-xl font-black tracking-[0.8em] text-white/90">TRIMTIME</span>
+                        <div className="h-[1px] w-12 bg-gradient-to-l from-transparent to-purple-500/50" />
+                    </div>
+                </div>
+                           {/* Now Serving Section */}
+                <div className="w-full relative z-10 mb-20">
+                    <div className="flex items-center justify-center gap-4 mb-12 opacity-60">
+                        <div className="h-[1px] w-8 bg-purple-500/50" />
+                        <span className="text-purple-400 font-bold uppercase tracking-[0.8em] text-[10px]">Live Now</span>
+                        <div className="h-[1px] w-8 bg-purple-500/50" />
+                    </div>
 
-                                <div className="mt-2 px-8 py-3 bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[2rem] shadow-2xl">
-                                    <span className="text-white text-2xl md:text-4xl font-serif italic font-extrabold tracking-tight">
-                                        {staff.find(s => s.id === nowServing[0].staff_id)?.name || 'Next Station'}
-                                    </span>
+                    <div className="flex flex-wrap justify-center gap-16 md:gap-24 animate-token-pop">
+                        {nowServing.length > 0 ? (
+                            nowServing.map((token) => (
+                                <div key={token.id} className="relative flex flex-col items-center">
+                                    {/* Individual Glow */}
+                                    <div className="absolute inset-0 bg-purple-600/10 blur-[100px] rounded-full scale-150" />
+                                    
+                                    <div className="relative flex flex-col items-center">
+                                        <div className="flex items-baseline mb-6">
+                                            <span className="text-[2.5rem] md:text-[3.5rem] text-purple-500 font-serif italic leading-none mr-1 drop-shadow-xl opacity-80">#</span>
+                                            <span className="text-[5rem] md:text-[8rem] font-black text-white leading-none tracking-tighter drop-shadow-2xl">
+                                                {token.token_number}
+                                            </span>
+                                        </div>
+                                        
+                                        <div className="flex flex-col items-center mb-6">
+                                            <div className="px-6 py-2 bg-white/5 backdrop-blur-2xl rounded-full border border-white/5 shadow-xl mb-4">
+                                                <CountdownTimer 
+                                                    targetDate={new Date(new Date(token.called_at || token.created_at).getTime() + getTokenDuration(token) * 60000)} 
+                                                    size="sm"
+                                                    color="#a855f7"
+                                                />
+                                            </div>
+                                            <span className="text-white/60 text-xl md:text-2xl font-serif italic font-medium tracking-tight">
+                                                {staff.find(s => s.id === token.staff_id)?.name || 'Next Station'}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            ))
                         ) : (
-                            <div className="text-[6rem] md:text-[10rem] font-serif italic text-white/5 tracking-widest animate-pulse">
+                            <div className="text-[4rem] md:text-[6rem] font-serif italic text-white/5 tracking-[0.5em] animate-pulse">
                                 Welcome
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* Up Next / Secondary Info - More Compact */}
-                <div className="w-full max-w-4xl animate-fade-in-up delay-300">
-                    <div className="flex items-center gap-6 justify-center">
-                        {upNext.slice(0, 3).map((token, i) => {
+                {/* Up Next / Waiting Line */}
+                <div className="w-full max-w-5xl animate-fade-in-up delay-500">
+                    <div className="flex items-center justify-center gap-4 mb-8 opacity-40">
+                        <div className="h-[1px] w-6 bg-white/30" />
+                        <span className="text-white font-bold uppercase tracking-[0.6em] text-[9px]">Up Next</span>
+                        <div className="h-[1px] w-6 bg-white/30" />
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-8 justify-center">
+                        {upNext.slice(0, 4).map((token, i) => {
                             const estTime = getEstimatedTarget(token, i);
                             const waitMins = Math.max(1, Math.ceil((new Date(estTime).getTime() - Date.now()) / 60000));
                             return (
-                                <div key={token.id} className="flex flex-col items-center px-8 py-5 bg-black/40 backdrop-blur-2xl border border-white/10 rounded-[2rem] hover:border-purple-500/40 transition-all duration-700">
-                                    <span className="text-white/20 text-[0.5rem] font-black uppercase tracking-[0.4em] mb-2">Up Next</span>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <span className="text-purple-400 text-xl font-serif italic">#</span>
-                                        <span className="text-4xl font-black text-white tracking-tighter">{token.token_number}</span>
+                                <div key={token.id} className="group flex items-center gap-4 px-6 py-3 bg-white/[0.02] backdrop-blur-md border border-white/5 rounded-2xl hover:bg-white/[0.05] transition-all duration-500">
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-purple-400 text-xs font-serif italic opacity-50">#</span>
+                                        <span className="text-2xl font-black text-white/90 tracking-tighter">{token.token_number}</span>
                                     </div>
-                                    <div className="flex items-center gap-2 px-3 py-1 bg-purple-500/5 rounded-full border border-purple-500/10">
-                                        <div className="w-1 h-1 rounded-full bg-purple-500 animate-pulse" />
-                                        <span className="text-purple-300/80 font-bold text-[10px] tracking-tight">{waitMins} min wait</span>
-                                    </div>
+                                    <div className="w-[1px] h-4 bg-white/10" />
+                                    <span className="text-white/40 font-bold text-[10px] tracking-wider uppercase">{waitMins} min</span>
                                 </div>
                             );
                         })}
                         
                         {upNext.length === 0 && nowServing.length > 0 && (
-                            <div className="opacity-20 flex flex-col items-center">
-                                <div className="h-[2px] w-32 bg-gradient-to-r from-transparent via-white to-transparent mb-4" />
-                                <span className="text-xs font-black uppercase tracking-[1em]">Relax & Enjoy</span>
+                            <div className="opacity-10 text-[10px] font-black uppercase tracking-[1em] py-4">
+                                Relax & Enjoy
                             </div>
                         )}
                     </div>

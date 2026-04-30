@@ -7,13 +7,23 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import CountdownTimer from '../components/common/CountdownTimer';
 import CartDrawer from '../components/cart/CartDrawer';
+import { formatDistance } from '../utils/geoUtils';
 
 const AVG_TIME_MINS = 15;
 
 const Home = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { shops, products, setCurrentShopId, loading: shopsLoading } = useShop();
+    const { 
+        shops, 
+        products, 
+        setCurrentShopId, 
+        loading: shopsLoading,
+        getLocation,
+        geoLoading,
+        geoError,
+        userLocation
+    } = useShop();
     const { addToCart, getCartCount } = useCart();
     const [queueData, setQueueData] = useState({});
     const [staffCounts, setStaffCounts] = useState({});
@@ -389,7 +399,49 @@ const Home = () => {
             <section id="shops" style={{ padding: '100px 5%' }}>
                 <div style={{ textAlign: 'center', marginBottom: '60px' }}>
                     <h2 style={{ fontSize: '2.5rem', fontWeight: '800', color: 'white', marginBottom: '15px' }}>Our Locations</h2>
-                    <div style={{ width: '60px', height: '4px', background: 'var(--primary)', margin: '0 auto' }}></div>
+                    <div style={{ width: '60px', height: '4px', background: 'var(--primary)', margin: '0 auto 30px' }}></div>
+                    
+                    {/* Geolocation Controls */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={getLocation}
+                            disabled={geoLoading}
+                            style={{
+                                padding: '12px 24px',
+                                background: userLocation ? 'rgba(16, 185, 129, 0.1)' : 'rgba(99, 102, 241, 0.1)',
+                                color: userLocation ? 'var(--success)' : 'var(--primary)',
+                                border: `1px solid ${userLocation ? 'var(--success)' : 'var(--primary)'}`,
+                                borderRadius: '50px',
+                                fontWeight: '700',
+                                fontSize: '0.9rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                backdropFilter: 'blur(10px)'
+                            }}
+                        >
+                            {geoLoading ? (
+                                <motion.div 
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                    style={{ width: 16, height: 16, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%' }}
+                                />
+                            ) : userLocation ? '📍 Location Active' : '📍 Find Nearby'}
+                        </motion.button>
+                        
+                        {geoError && (
+                            <motion.span 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                style={{ color: '#f87171', fontSize: '0.85rem', fontWeight: '500' }}
+                            >
+                                {geoError}
+                            </motion.span>
+                        )}
+                    </div>
                 </div>
 
                 <div style={{ 
@@ -423,6 +475,26 @@ const Home = () => {
                                 alt={shop.name}
                                 style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }}
                             />
+                            
+                            {/* Distance Badge */}
+                            {shop.distance !== undefined && shop.distance !== null && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '20px',
+                                    right: '20px',
+                                    padding: '8px 16px',
+                                    background: 'rgba(0,0,0,0.6)',
+                                    backdropFilter: 'blur(10px)',
+                                    borderRadius: '12px',
+                                    color: 'white',
+                                    fontSize: '0.8rem',
+                                    fontWeight: '700',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}>
+                                    {formatDistance(shop.distance)}
+                                </div>
+                            )}
+
                             <div style={{
                                 position: 'absolute',
                                 inset: 0,

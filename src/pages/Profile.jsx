@@ -3,7 +3,9 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useShop } from '../contexts/ShopContext';
 import CountdownTimer from '../components/common/CountdownTimer';
+import { calculateDistance, formatDistance } from '../utils/geoUtils';
 
 const AVG_TIME_MINS = 15;
 
@@ -355,6 +357,7 @@ const TokenWaitTimer = ({ token }) => {
 
 const Profile = () => {
     const { user, logout } = useAuth();
+    const { location } = useShop();
     const navigate = useNavigate();
     const [tokens, setTokens] = useState([]);
     const [orders, setOrders] = useState([]);
@@ -397,7 +400,7 @@ const Profile = () => {
 
             const { data, error } = await supabase
                 .from('tokens')
-                .select('*, shops(name, address)')
+                .select('*, shops(name, address, latitude, longitude)')
                 .eq('customer_phone', phone)
                 .order('created_at', { ascending: false });
 
@@ -523,6 +526,26 @@ const Profile = () => {
                                     <div style={S.tokenHeader}>
                                         <h3 style={S.shopName}>{token.shops?.name}</h3>
                                         <p style={S.shopAddress}>{token.shops?.address}</p>
+                                        {location && token.shops?.latitude && (
+                                            <div style={{
+                                                fontSize: '0.75rem',
+                                                color: '#60a5fa',
+                                                fontWeight: '700',
+                                                marginTop: '8px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '4px'
+                                            }}>
+                                                <span>🚀</span> 
+                                                {formatDistance(calculateDistance(
+                                                    location.latitude, 
+                                                    location.longitude, 
+                                                    token.shops.latitude, 
+                                                    token.shops.longitude
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
 
                                         <div style={S.tokenBody}>

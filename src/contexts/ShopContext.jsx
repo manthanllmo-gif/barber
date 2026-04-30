@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 import { useAuth } from './AuthContext';
+import { useGeolocation } from '../hooks/useGeolocation';
+import { calculateDistance } from '../utils/geoUtils';
 
 // Use the singleton client from lib/supabase to avoid multiple GoTrueClient warnings
 
@@ -9,6 +11,7 @@ const ShopContext = createContext();
 
 export const ShopProvider = ({ children }) => {
     const { user, role, shopId: authShopId } = useAuth();
+    const { location, error: geoError, loading: geoLoading, getLocation } = useGeolocation();
     const [shops, setShops] = useState([]);
     const [products, setProducts] = useState([]);
     const [currentShopId, setCurrentShopId] = useState(() => localStorage.getItem('selectedShopId'));
@@ -57,6 +60,32 @@ export const ShopProvider = ({ children }) => {
         }
     }, [user, role, authShopId]);
 
+    // Enhanced shops with distance calculation
+    const enhancedShops = useMemo(() => {
+        if (!location) return shops;
+
+        return shops.map(shop => ({
+            ...shop,
+            distance: calculateDistance(
+                location.latitude,
+                location.longitude,
+                shop.latitude,
+                shop.longitude
+            )
+        }));
+    }, [shops, location]);
+
+    // Sorted shops by distance
+    const sortedShops = useMemo(() => {
+        if (!location) return enhancedShops;
+
+        return [...enhancedShops].sort((a, b) => {
+            if (a.distance === null) return 1;
+            if (b.distance === null) return -1;
+            return a.distance - b.distance;
+        });
+    }, [enhancedShops, location]);
+
     const addShop = async (shopData) => {
         try {
             const { data, error } = await supabase.from('shops').insert([shopData]).select().single();
@@ -71,7 +100,20 @@ export const ShopProvider = ({ children }) => {
     };
 
     return (
-        <ShopContext.Provider value={{ shops, products, currentShopId, setCurrentShopId, addShop, loading, refreshShops: fetchData }}>
+        <ShopContext.Provider value={{ 
+            shops: sortedShops, 
+            rawShops: shops,
+            products, 
+            currentShopId, 
+            setCurrentShopId, 
+            addShop, 
+            loading, 
+            refreshShops: fetchData,
+            userLocation: location,
+            getLocation,
+            geoLoading,
+            geoError
+        }}>
             {children}
         </ShopContext.Provider>
     );

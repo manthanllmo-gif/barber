@@ -10,9 +10,16 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+out/
 *.local
 .env
 .env.*
+
+# Scratch Scripts
+scratch_*.js
+verify_*.js
+test_*.js
+final_debug_*.js
 
 # Editor directories and files
 .vscode/*

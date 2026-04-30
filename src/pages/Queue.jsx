@@ -2,15 +2,17 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useShop } from '../contexts/ShopContext';
 import { useAuth } from '../contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import CountdownTimer from '../components/common/CountdownTimer';
 import { motion, AnimatePresence } from 'framer-motion';
+import { formatDistance } from '../utils/geoUtils';
 
 const AVG_TIME_MINS = 15;
 
 const Queue = () => {
     const { currentShopId, shops } = useShop();
     const { user, signup, login } = useAuth();
+    const navigate = useNavigate();
 
     if (!currentShopId) {
         return <Navigate to="/" />;
@@ -411,6 +413,11 @@ const Queue = () => {
                         <div style={S.infoItem}>
                             <span>📍</span> {shop.address || 'Location'}
                         </div>
+                        {shop.distance !== undefined && shop.distance !== null && (
+                            <div style={{...S.infoItem, color: '#60a5fa', fontWeight: '700'}}>
+                                <span>🚀</span> {formatDistance(shop.distance)}
+                            </div>
+                        )}
                         <div style={S.infoItem}>
                             <span>⏰</span> 09:00 - 21:00
                         </div>

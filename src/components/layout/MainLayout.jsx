@@ -270,12 +270,11 @@ const Header = ({ onOpenCart }) => {
             color: 'white', 
             fontSize: '1.2rem', 
             cursor: 'pointer',
-            display: 'none', 
             zIndex: 1001,
             width: '45px',
             height: '45px',
             borderRadius: '12px',
-            display: 'flex',
+            display: 'none', // Set to none, overriden by media query
             alignItems: 'center',
             justifyContent: 'center',
             transition: 'all 0.3s ease'
@@ -402,7 +401,6 @@ const BottomNav = ({ onShowAuth }) => {
     border: '1px solid rgba(255, 255, 255, 0.05)',
     borderRadius: '100px',
     padding: '6px 12px',
-    display: 'flex',
     gap: '4px',
     alignItems: 'center',
     zIndex: 2000,

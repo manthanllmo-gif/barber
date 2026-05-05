@@ -11,7 +11,9 @@ const CountdownTimer = ({
     targetDate, 
     onComplete, 
     size = 'md', 
-    color 
+    color,
+    strokeColor,
+    totalSeconds // New prop to stabilize progress bar
 }) => {
     // Helper to calculate remaining seconds from a target date
     const getSecondsFromTarget = (target) => {
@@ -28,6 +30,7 @@ const CountdownTimer = ({
     
     // We keep track of the initial total duration for the progress bar
     const [totalDuration, setTotalDuration] = useState(() => {
+        if (totalSeconds) return totalSeconds;
         const targetSeconds = getSecondsFromTarget(targetDate);
         return targetSeconds !== null ? targetSeconds : initialSeconds;
     });
@@ -39,12 +42,15 @@ const CountdownTimer = ({
         const targetSeconds = getSecondsFromTarget(targetDate);
         const newSeconds = targetSeconds !== null ? targetSeconds : initialSeconds;
         setTimeLeft(newSeconds);
-        // Only reset total duration if the change is significant (more than 10s)
-        // This prevents the progress bar from jumping during minor sync updates
-        if (Math.abs(newSeconds - totalDuration) > 10) {
+        
+        // If totalSeconds is provided, use it as the anchor
+        if (totalSeconds) {
+            setTotalDuration(totalSeconds);
+        } else if (Math.abs(newSeconds - totalDuration) > 10) {
+            // Fallback for when totalSeconds isn't provided
             setTotalDuration(newSeconds);
         }
-    }, [targetDate, initialSeconds]);
+    }, [targetDate, initialSeconds, totalSeconds]);
 
     useEffect(() => {
         let interval = null;
@@ -109,7 +115,7 @@ const CountdownTimer = ({
                     cy="50%"
                     r="42%"
                     fill="transparent"
-                    stroke="rgba(255, 255, 255, 0.1)"
+                    stroke={strokeColor || "rgba(0, 0, 0, 0.05)"}
                     strokeWidth={currentSize.stroke}
                 />
                 {/* Progress Circle */}
@@ -118,14 +124,14 @@ const CountdownTimer = ({
                     cy="50%"
                     r="42%"
                     fill="transparent"
-                    stroke="var(--primary)"
+                    stroke={color || "#276EF1"}
                     strokeWidth={currentSize.stroke}
                     strokeDasharray="264%"
                     strokeDashoffset={`${264 - (264 * progress) / 100}%`}
                     strokeLinecap="round"
                     style={{ 
                         transition: 'all 1s linear',
-                        filter: 'drop-shadow(0 0 4px rgba(99, 102, 241, 0.3))'
+                        filter: `drop-shadow(0 0 8px ${color || "#276EF1"}44)`
                     }}
                 />
             </svg>
@@ -142,7 +148,7 @@ const CountdownTimer = ({
                 <span style={{ 
                     fontSize: currentSize.fontSize, 
                     fontWeight: '800', 
-                    color: color || '#fff', 
+                    color: color || '#000000', 
                     fontFamily: 'monospace',
                     letterSpacing: '-0.5px'
                 }}>
@@ -154,7 +160,7 @@ const CountdownTimer = ({
                         fontWeight: '800', 
                         textTransform: 'uppercase', 
                         letterSpacing: '0.1em', 
-                        color: '#64748b', 
+                        color: '#666666', 
                         marginTop: '4px' 
                     }}>
                         REMAINING

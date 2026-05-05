@@ -3,11 +3,17 @@ import { useAuth } from '../contexts/AuthContext';
 import ShopsManagement from './ShopsManagement';
 import AdminAnalytics from './AdminAnalytics';
 import AdminOrders from '../components/admin/AdminOrders';
+import AdminStaff from '../components/admin/AdminStaff';
+import AdminCategories from '../components/admin/AdminCategories';
+import AdminServices from '../components/admin/AdminServices';
 
 /* ─── Sidebar / tab navigation style ─── */
 const NAV_ITEMS = [
     { id: 'shops', label: '🏪 Shops', component: ShopsManagement },
+    { id: 'staff', label: '💈 Staff/Barbers', component: AdminStaff },
+    { id: 'services', label: '💇 Services', component: AdminServices },
     { id: 'orders', label: '📦 Orders', component: AdminOrders },
+    { id: 'categories', label: '📂 Categories', component: AdminCategories },
     { id: 'analytics', label: '📊 Analytics', component: () => <AdminAnalytics /> },
 ];
 
@@ -31,7 +37,7 @@ const S = {
     }),
     sidebarFooter: { marginTop: 'auto', padding: '16px 22px' },
     logoutBtn: {
-        width: '100%', padding: '10px 0', backgroundColor: '#b71c1c', color: '#fff',
+        width: '100%', padding: '10px 0', backgroundColor: '#000000', color: '#ffffff',
         border: 'none', borderRadius: '7px', cursor: 'pointer', fontSize: '13px', fontWeight: 600,
     },
     content: { flex: 1, overflow: 'auto', minWidth: 0 },

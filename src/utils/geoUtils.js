@@ -46,3 +46,33 @@ export const formatDistance = (km) => {
     
     return `approx ${km.toFixed(1)} km`;
 };
+
+/**
+ * Calculates ETA based on distance and average speed
+ * @param {number} km - Distance in kilometers
+ * @param {number} speedKmHr - Average speed in km/hr
+ * @returns {number} ETA in minutes
+ */
+export const calculateETA = (km, speedKmHr = 35) => {
+    if (km === null || km === undefined || isNaN(km)) return 0;
+    // Time = Distance / Speed
+    // Minutes = (km / speed) * 60
+    const mins = (km / speedKmHr) * 60;
+    return Math.round(mins);
+};
+
+/**
+ * Formats ETA for premium UI display
+ * @param {number} mins - Time in minutes
+ * @returns {string} Formatted ETA string
+ */
+export const formatETA = (mins) => {
+    if (mins <= 0) return '';
+    if (mins < 1) return '< 1 min away';
+    if (mins >= 60) {
+        const hrs = Math.floor(mins / 60);
+        const m = mins % 60;
+        return `${hrs}h ${m}m away`;
+    }
+    return `${mins} mins away`;
+};

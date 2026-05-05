@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout.jsx';
 import Home from './pages/Home.jsx';
@@ -9,14 +10,20 @@ import Profile from './pages/Profile.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
 import PublicDisplay from './pages/PublicDisplay.jsx';
 import TimerDemo from './pages/TimerDemo.jsx';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { CartProvider } from './contexts/CartContext';
+import Pitch from './pages/Pitch.jsx';
+import Saloons from './pages/Saloons.jsx';
+import ShopProducts from './pages/ShopProducts.jsx';
+import Barbers from './pages/Barbers.jsx';
+import BarberProfile from './pages/BarberProfile.jsx';
+import Onboarding from './pages/Onboarding.jsx';
+import { useAuth } from './contexts/AuthContext';
 import Checkout from './pages/Checkout';
 import ScrollToTop from './components/common/ScrollToTop';
+import Preloader from './components/common/Preloader.jsx';
+import { AnimatePresence } from 'framer-motion';
 
 const AdminRoute = ({ children }) => {
   const { user, role, loading } = useAuth();
-  // Only block if we are loading AND don't have a role yet
   if (loading && !role) return null;
   
   if (role === 'error') return (
@@ -32,7 +39,6 @@ const AdminRoute = ({ children }) => {
 
 const ShopRoute = ({ children }) => {
   const { user, role, loading } = useAuth();
-  // Only block if we are loading AND don't have a role yet
   if (loading && !role) return <div style={{ padding: '20px', textAlign: 'center' }}>Loading...</div>;
   
   if (role === 'error') return <div style={{ padding: '20px', color: 'red' }}>⚠️ Connection error. Please refresh.</div>;
@@ -51,40 +57,66 @@ const FallbackRoute = () => {
 };
 
 function App() {
+  const { loading, role } = useAuth();
+  const [minLoadingDone, setMinLoadingDone] = useState(false);
+  const [onboardingComplete, setOnboardingComplete] = useState(localStorage.getItem('onboarding_complete'));
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMinLoadingDone(true);
+    }, 2500); // 2.5 seconds minimum
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem('onboarding_complete', 'true');
+    setOnboardingComplete('true');
+  };
+
+  const showLoader = loading || !minLoadingDone;
+
   return (
-    <AuthProvider>
+    <>
       <ScrollToTop />
-      <CartProvider>
-        <MainLayout>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/queue" element={<Queue />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/admin" element={
-            <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
-          } />
-          <Route path="/app" element={
-            <ShopRoute>
-              <Dashboard />
-            </ShopRoute>
-          } />
-          
-          <Route path="/display/:shopId" element={<PublicDisplay />} />
-          <Route path="/timer-demo" element={<TimerDemo />} />
-
-          {/* Legacy path for back-compat or redirect mapping */}
-          <Route path="/dashboard" element={<Navigate to="/app" />} />
-
-          <Route path="*" element={<FallbackRoute />} />
-        </Routes>
-      </MainLayout>
-      </CartProvider>
-    </AuthProvider>
+      <AnimatePresence mode="wait">
+        {showLoader && !role && <Preloader key="preloader" />}
+      </AnimatePresence>
+      
+      <Routes>
+        <Route path="/onboarding" element={<Onboarding onComplete={handleOnboardingComplete} />} />
+        <Route path="/*" element={
+          <MainLayout>
+            <Routes>
+              <Route path="/" element={!onboardingComplete ? <Navigate to="/onboarding" /> : <Home />} />
+              <Route path="/saloons" element={<Saloons />} />
+              <Route path="/shop" element={<ShopProducts />} />
+              <Route path="/barbers" element={<Barbers />} />
+              <Route path="/barbers/:id" element={<BarberProfile />} />
+              <Route path="/queue" element={<Queue />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/admin" element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              } />
+              <Route path="/app" element={
+                <ShopRoute>
+                  <Dashboard />
+                </ShopRoute>
+              } />
+              <Route path="/display/:shopId" element={<PublicDisplay />} />
+              <Route path="/timer-demo" element={<TimerDemo />} />
+              <Route path="/pitch" element={<Pitch />} />
+              <Route path="/dashboard" element={<Navigate to="/app" />} />
+              <Route path="*" element={<FallbackRoute />} />
+            </Routes>
+          </MainLayout>
+        } />
+      </Routes>
+    </>
   );
 }
 

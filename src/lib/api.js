@@ -66,6 +66,21 @@ export const deleteProduct = async (id) => {
 };
 
 // Staff Management
+export const fetchAllStaff = async () => {
+    try {
+        const { data, error } = await supabase
+            .from('staff')
+            .select('*, shops(name)')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data || [];
+    } catch (err) {
+        console.error("Error fetching all staff:", err.message);
+        return [];
+    }
+};
+
 export const deleteStaff = async (id) => {
     try {
         const { error } = await supabase.from('staff').delete().eq('id', id);

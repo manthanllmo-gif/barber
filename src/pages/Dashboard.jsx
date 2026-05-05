@@ -11,11 +11,15 @@ import {
     deleteProduct,
     toggleProductVisibility
 } from '../lib/api';
+import { uploadImage } from '../lib/upload';
 import { useShop } from '../contexts/ShopContext';
+import { useAuth } from '../contexts/AuthContext';
 import CountdownTimer from '../components/common/CountdownTimer';
 
 const Dashboard = () => {
-    const { currentShopId } = useShop();
+    const { user, role, logout } = useAuth();
+    const { shops, currentShopId, dbCategories = [], serviceTypes = [] } = useShop();
+    const shopData = shops.find(s => s.id === currentShopId);
     const [searchParams, setSearchParams] = useSearchParams();
     const activeTab = searchParams.get('tab') || 'queue';
     
@@ -59,9 +63,33 @@ const Dashboard = () => {
     const [paymentMode, setPaymentMode] = useState('cash'); // 'cash' or 'online'
 
     // Add Form states
-    const [serviceForm, setServiceForm] = useState({ name: '', price: '', avg_time: 15 });
-    const [productForm, setProductForm] = useState({ name: '', price: '', stock: '' });
-    const [staffForm, setStaffForm] = useState({ name: '', role: '' });
+    const [serviceForm, setServiceForm] = useState({ name: '', price: '', avg_time: 15, service_type_id: '', image_url: '' });
+    const [productForm, setProductForm] = useState({ name: '', price: '', stock: '', category_id: '' });
+    const EMPTY_STAFF_FORM = useMemo(() => ({
+        name: '', 
+        role: '',
+        rating: 5.0,
+        experience_years: 0,
+        skills: '',
+        certificates: '',
+        certificate_urls: [],
+        past_saloons: '',
+        trainings: '',
+        features: '',
+        gallery_urls: [],
+        image_url: ''
+    }), []);
+
+    const [staffForm, setStaffForm] = useState(EMPTY_STAFF_FORM);
+    const [shopProfileForm, setShopProfileForm] = useState({
+        about_text: '',
+        amenities: '',
+        gallery_urls: []
+    });
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const [savingProfile, setSavingProfile] = useState(false);
+    
+    const [showStaffModal, setShowStaffModal] = useState(false);
     const [editingStaff, setEditingStaff] = useState(null);
     const [editingService, setEditingService] = useState(null);
     const [editingProduct, setEditingProduct] = useState(null);
@@ -238,6 +266,23 @@ const Dashboard = () => {
         } catch (err) { console.error(err); }
     };
 
+    const loadShopProfile = async () => {
+        if (!currentShopId) return;
+        try {
+            const { data, error } = await supabase.from('shops').select('*').eq('id', currentShopId).single();
+            if (error) throw error;
+            if (data) {
+                setShopProfileForm({
+                    about_text: data.about_text || '',
+                    amenities: Array.isArray(data.amenities) ? data.amenities.join(', ') : '',
+                    gallery_urls: data.gallery_urls || []
+                });
+            }
+        } catch (err) {
+            console.error("Error loading shop profile:", err);
+        }
+    };
+
     const fetchActiveQueue = async () => {
         try {
             const { data, error } = await supabase
@@ -297,7 +342,8 @@ const Dashboard = () => {
                 loadServices(),
                 loadProducts(),
                 fetchOrders(),
-                fetchTokensServedTotal()
+                fetchTokensServedTotal(),
+                loadShopProfile()
             ]);
             setFetching(false);
         };
@@ -393,6 +439,111 @@ const Dashboard = () => {
         setSelectedAdditionalServicesForBilling([]);
         setManualAmount(0);
         setPaymentMode('cash');
+    };
+
+    const handleUpdateShopProfile = async (e) => {
+        e.preventDefault();
+        setSavingProfile(true);
+        try {
+            const amenitiesArray = shopProfileForm.amenities.split(',').map(s => s.trim()).filter(s => s);
+            const { error } = await supabase.from('shops').update({
+                about_text: shopProfileForm.about_text,
+                amenities: amenitiesArray,
+                gallery_urls: shopProfileForm.gallery_urls
+            }).eq('id', currentShopId);
+            
+            if (error) throw error;
+            alert("Shop profile updated successfully!");
+        } catch (err) {
+            console.error("Error updating shop profile:", err);
+            alert("Failed to update shop profile");
+        } finally {
+            setSavingProfile(false);
+        }
+    };
+
+    const handleGalleryUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setUploadingImage(true);
+        try {
+            const url = await uploadImage(file, 'images', `gallery/${currentShopId}`);
+            if (url) {
+                setShopProfileForm(prev => ({
+                    ...prev,
+                    gallery_urls: [...(prev.gallery_urls || []), url]
+                }));
+            }
+        } catch (err) {
+            console.error("Upload error:", err);
+            alert("Failed to upload image");
+        } finally {
+            setUploadingImage(false);
+        }
+    };
+
+    const handleStaffImageUpload = async (e, isEditing) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setUploadingImage(true);
+        try {
+            const url = await uploadImage(file, 'images', 'staff');
+            if (isEditing) {
+                setEditingStaff(prev => ({ ...prev, image_url: url }));
+            } else {
+                setStaffForm(prev => ({ ...prev, image_url: url }));
+            }
+        } catch (err) {
+            alert("Failed to upload image");
+        } finally {
+            setUploadingImage(false);
+        }
+    };
+
+    const handleStaffMultiImageUpload = async (e, field, isEditing) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        setUploadingImage(true);
+        try {
+            const uploadedUrls = [];
+            for (const file of files) {
+                const url = await uploadImage(file, 'images', `staff_${field}`);
+                uploadedUrls.push(url);
+            }
+
+            if (isEditing) {
+                setEditingStaff(prev => ({ 
+                    ...prev, 
+                    [field]: [...(prev[field] || []), ...uploadedUrls] 
+                }));
+            } else {
+                setStaffForm(prev => ({ 
+                    ...prev, 
+                    [field]: [...(prev[field] || []), ...uploadedUrls] 
+                }));
+            }
+        } catch (err) {
+            alert("Failed to upload images: " + err.message);
+        } finally {
+            setUploadingImage(false);
+            e.target.value = null; // Reset input to allow re-uploading same files if needed
+        }
+    };
+
+    const removeStaffMultiImage = (field, indexToRemove, isEditing) => {
+        if (isEditing) {
+            setEditingStaff(prev => ({ ...prev, [field]: prev[field].filter((_, idx) => idx !== indexToRemove) }));
+        } else {
+            setStaffForm(prev => ({ ...prev, [field]: prev[field].filter((_, idx) => idx !== indexToRemove) }));
+        }
+    };
+
+    const removeGalleryImage = (indexToRemove) => {
+        setShopProfileForm(prev => ({
+            ...prev,
+            gallery_urls: prev.gallery_urls.filter((_, idx) => idx !== indexToRemove)
+        }));
     };
 
     const handleCompleteFinal = async (finalAmount) => {
@@ -523,16 +674,29 @@ const Dashboard = () => {
     };
 
     // Service + Product + Staff form handlers
+
     const createStaff = async (e) => {
         e.preventDefault();
         try {
-            const { error } = await supabase.from('staff').insert([{
-                name: staffForm.name,
-                role: staffForm.role || 'general',
+            const payload = {
+                name: (staffForm.name || '').trim(),
+                role: (staffForm.role || '').trim() || 'general',
+                rating: parseFloat(staffForm.rating) || 5.0,
+                experience_years: parseInt(staffForm.experience_years) || 0,
+                skills: staffForm.skills ? String(staffForm.skills).split(',').map(s => s.trim()).filter(Boolean) : [],
+                certificates: staffForm.certificates ? String(staffForm.certificates).split(',').map(s => s.trim()).filter(Boolean) : [],
+                certificate_urls: staffForm.certificate_urls || [],
+                past_saloons: staffForm.past_saloons ? String(staffForm.past_saloons).split(',').map(s => s.trim()).filter(Boolean) : [],
+                trainings: staffForm.trainings ? String(staffForm.trainings).split(',').map(s => s.trim()).filter(Boolean) : [],
+                features: staffForm.features ? String(staffForm.features).split(',').map(s => s.trim()).filter(Boolean) : [],
+                gallery_urls: staffForm.gallery_urls || [],
+                image_url: (staffForm.image_url || '').trim() || null,
                 shop_id: currentShopId
-            }]);
+            };
+            const { error } = await supabase.from('staff').insert([payload]);
             if (error) throw error;
-            setStaffForm({ name: '', role: '' });
+            setStaffForm(EMPTY_STAFF_FORM);
+            setShowStaffModal(false);
             await loadStaff();
         } catch (err) { alert(err.message); }
     };
@@ -544,9 +708,11 @@ const Dashboard = () => {
                 name: serviceForm.name,
                 price: parseInt(serviceForm.price) || 0,
                 avg_time: parseInt(serviceForm.avg_time) || 15,
+                service_type_id: serviceForm.service_type_id || null,
+                image_url: serviceForm.image_url || null,
                 shop_id: currentShopId
             }]);
-            setServiceForm({ name: '', price: '', avg_time: 15 });
+            setServiceForm({ name: '', price: '', avg_time: 15, service_type_id: '', image_url: '' });
             await loadServices();
         } catch (err) { alert(err.message); }
     };
@@ -558,9 +724,11 @@ const Dashboard = () => {
                 name: productForm.name,
                 price: parseInt(productForm.price) || 0,
                 stock: parseInt(productForm.stock) || 0,
+                category_id: productForm.category_id || null,
+                image_url: productForm.image_url || null,
                 shop_id: currentShopId
             }]);
-            setProductForm({ name: '', price: '', stock: '' });
+            setProductForm({ name: '', price: '', stock: '', category_id: '', image_url: '' });
             await loadProducts();
         } catch (err) { alert(err.message); }
     };
@@ -586,12 +754,24 @@ const Dashboard = () => {
     const handleUpdateStaff = async (e) => {
         e.preventDefault();
         try {
-            const { error } = await supabase.from('staff').update({
-                name: editingStaff.name,
-                role: editingStaff.role
-            }).eq('id', editingStaff.id);
+            const payload = {
+                name: (editingStaff.name || '').trim(),
+                role: (editingStaff.role || '').trim(),
+                rating: parseFloat(editingStaff.rating) || 5.0,
+                experience_years: parseInt(editingStaff.experience_years) || 0,
+                skills: Array.isArray(editingStaff.skills) ? editingStaff.skills : (editingStaff.skills ? String(editingStaff.skills).split(',').map(s => s.trim()).filter(Boolean) : []),
+                certificates: Array.isArray(editingStaff.certificates) ? editingStaff.certificates : (editingStaff.certificates ? String(editingStaff.certificates).split(',').map(s => s.trim()).filter(Boolean) : []),
+                certificate_urls: editingStaff.certificate_urls || [],
+                past_saloons: Array.isArray(editingStaff.past_saloons) ? editingStaff.past_saloons : (editingStaff.past_saloons ? String(editingStaff.past_saloons).split(',').map(s => s.trim()).filter(Boolean) : []),
+                trainings: Array.isArray(editingStaff.trainings) ? editingStaff.trainings : (editingStaff.trainings ? String(editingStaff.trainings).split(',').map(s => s.trim()).filter(Boolean) : []),
+                features: Array.isArray(editingStaff.features) ? editingStaff.features : (editingStaff.features ? String(editingStaff.features).split(',').map(s => s.trim()).filter(Boolean) : []),
+                gallery_urls: editingStaff.gallery_urls || [],
+                image_url: (editingStaff.image_url || '').trim() || null
+            };
+            const { error } = await supabase.from('staff').update(payload).eq('id', editingStaff.id);
             if (error) throw error;
             setEditingStaff(null);
+            setShowStaffModal(false);
             await loadStaff();
         } catch (err) { alert(err.message); }
     };
@@ -618,7 +798,9 @@ const Dashboard = () => {
             const { error } = await supabase.from('services').update({
                 name: editingService.name,
                 price: parseInt(editingService.price),
-                avg_time: parseInt(editingService.avg_time)
+                avg_time: parseInt(editingService.avg_time),
+                service_type_id: editingService.service_type_id || null,
+                image_url: editingService.image_url || null
             }).eq('id', editingService.id);
             if (error) throw error;
             setEditingService(null);
@@ -648,7 +830,9 @@ const Dashboard = () => {
             const { error } = await supabase.from('products').update({
                 name: editingProduct.name,
                 price: parseInt(editingProduct.price),
-                stock: parseInt(editingProduct.stock)
+                stock: parseInt(editingProduct.stock),
+                category_id: editingProduct.category_id || null,
+                image_url: editingProduct.image_url || null
             }).eq('id', editingProduct.id);
             if (error) throw error;
             setEditingProduct(null);
@@ -770,37 +954,296 @@ const Dashboard = () => {
         return targetDate.toISOString();
     };
 
+    const isOwner = role === 'shop_owner' || role === 'owner';
+    const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
     // Renders
     return (
-        <div className="dashboard-container">
-
-            <div className="dashboard-inner">
-                <header className="premium-header">
-                    <div>
-                        <h1 className="premium-title" style={{ fontSize: '32px', fontWeight: '800', letterSpacing: '-0.03em' }}>Shop Dashboard</h1>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
-                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 10px var(--success)' }}></span>
-                            <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '13px', fontWeight: '500' }}>Live • Real-time Monitoring</p>
+        <div className={`dashboard-container ${isOwner ? 'owner-layout' : ''}`}>
+            {isOwner && (
+                <>
+                    <div 
+                        className={`sidebar-overlay ${mobileSidebarOpen ? 'visible' : ''}`}
+                        onClick={() => setMobileSidebarOpen(false)}
+                    />
+                    <aside className={`dashboard-sidebar ${mobileSidebarOpen ? 'mobile-open' : ''}`}>
+                        <div className="sidebar-brand">
+                            <div className="brand-logo">💈</div>
+                            <div className="brand-text">
+                                <div style={{ fontWeight: '900', color: '#000', fontSize: '20px', letterSpacing: '-0.5px' }}>TrimTime</div>
+                                <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', marginTop: '2px' }}>{shopData?.name || 'Shop Admin'}</div>
+                            </div>
                         </div>
-                    </div>
-                    <nav className="tab-nav">
-                        {['queue', 'services', 'products', 'orders', 'staff', 'analytics'].map(tab => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
+
+                        <nav className="sidebar-nav">
+                            {[
+                                { id: 'queue', label: 'Queue', icon: '⚡' },
+                                { id: 'orders', label: 'Orders', icon: '📦' },
+                                { id: 'services', label: 'Services', icon: '✂️' },
+                                { id: 'products', label: 'Products', icon: '🧴' },
+                                { id: 'staff', label: 'Staff', icon: '👤' },
+                                { id: 'analytics', label: 'Analytics', icon: '📊' },
+                                { id: 'profile', label: 'Shop Settings', icon: '⚙️' },
+                            ].map(item => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => {
+                                        setActiveTab(item.id);
+                                        setMobileSidebarOpen(false);
+                                    }}
+                                    className={`sidebar-btn ${activeTab === item.id ? 'active' : ''}`}
+                                >
+                                    <span className="btn-icon">{item.icon}</span>
+                                    <span className="btn-label">{item.label}</span>
+                                </button>
+                            ))}
+                        </nav>
+
+                        <div className="sidebar-footer">
+                            <button 
+                                onClick={logout}
                                 style={{ 
-                                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    background: activeTab === tab ? 'var(--premium-gradient)' : 'transparent',
-                                    color: activeTab === tab ? 'white' : 'var(--text-muted)',
-                                    boxShadow: activeTab === tab ? '0 8px 16px -4px rgba(99, 102, 241, 0.4)' : 'none'
+                                    width: '100%', 
+                                    padding: '12px', 
+                                    background: 'rgba(0,0,0,0.05)', 
+                                    border: 'none', 
+                                    borderRadius: '12px', 
+                                    color: '#000', 
+                                    fontSize: '13px', 
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '10px'
                                 }}
                             >
-                                {tab}
+                                🚪 Logout
                             </button>
-                        ))}
-                    </nav>
-                </header>
+                        </div>
+                    </aside>
+                </>
+            )}
+
+            <div className="dashboard-inner">
+                {/* Mobile Menu Trigger - Minimalist Fixed Header */}
+                {isOwner && (
+                    <div className="mobile-dashboard-header">
+                        <div className="mobile-header-brand" style={{ 
+                            fontSize: '1rem', 
+                            fontWeight: '950', 
+                            color: '#000000', 
+                            letterSpacing: '-0.8px' 
+                        }}>
+                            TRIMTIME<span style={{ color: '#276EF1' }}>.</span>
+                        </div>
+                        <button 
+                            className="mobile-only-btn"
+                            onClick={() => setMobileSidebarOpen(true)}
+                        >
+                            ⋮
+                        </button>
+                    </div>
+                )}
+                {!isOwner && (
+                    <header className="premium-header">
+                        <div>
+                            <h1 className="premium-title" style={{ fontSize: '32px', fontWeight: '800', letterSpacing: '-0.03em' }}>Shop Dashboard</h1>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 10px var(--success)' }}></span>
+                                <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '13px', fontWeight: '500' }}>Live • Real-time Monitoring</p>
+                            </div>
+                        </div>
+                        <nav className="tab-nav">
+                            {['queue', 'services', 'products', 'orders', 'staff', 'profile', 'analytics'].map(tab => (
+                                <button
+                                    key={tab}
+                                    onClick={() => setActiveTab(tab)}
+                                    className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
+                                    style={{ 
+                                        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        background: activeTab === tab ? 'var(--premium-gradient)' : 'transparent',
+                                        color: activeTab === tab ? 'white' : 'var(--text-muted)',
+                                        boxShadow: activeTab === tab ? '0 8px 16px -4px rgba(99, 102, 241, 0.4)' : 'none'
+                                    }}
+                                >
+                                    {tab}
+                                </button>
+                            ))}
+                        </nav>
+                    </header>
+                )}
+
+                {/* OWNER QUICK CONTROL INTERFACE */}
+                {isOwner && (
+                    <div className="owner-quick-controls" style={{ 
+                        background: '#000000', 
+                        padding: '40px', 
+                        borderRadius: '32px', 
+                        marginBottom: '40px',
+                        color: '#FFF',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '32px',
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
+                    }}>
+                        <div className="quick-controls-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
+                            <div>
+                                <h2 style={{ margin: 0, fontSize: '32px', fontWeight: '950', letterSpacing: '-1.5px', color: '#FFF' }}>Queue Control</h2>
+                                <p style={{ color: 'rgba(255,255,255,0.5)', margin: '8px 0 0', fontSize: '14px' }}>Managing {pendingTokens.length} waiting customers</p>
+                            </div>
+                            <div className="quick-controls-actions" style={{ 
+                                display: 'flex', 
+                                gap: '12px', 
+                                alignItems: 'center', 
+                                flexWrap: 'wrap',
+                                justifyContent: 'flex-end',
+                                maxWidth: '100%'
+                            }}>
+                                <button 
+                                    onClick={() => setIsWalkinModalOpen(true)}
+                                    style={{
+                                        background: 'rgba(255,255,255,0.1)',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        color: '#FFF',
+                                        padding: '10px 18px',
+                                        borderRadius: '14px',
+                                        fontSize: '13px',
+                                        fontWeight: '800',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        transition: 'all 0.2s',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+                                    onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                                >
+                                    <span style={{ fontSize: '16px' }}>➕</span> New Walk-in
+                                </button>
+                                <button 
+                                    onClick={() => window.open(`/display/${currentShopId}`, '_blank')}
+                                    style={{
+                                        background: 'rgba(255,255,255,0.08)',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        color: '#FFF',
+                                        padding: '10px 18px',
+                                        borderRadius: '14px',
+                                        fontSize: '13px',
+                                        fontWeight: '800',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        whiteSpace: 'nowrap',
+                                        backdropFilter: 'blur(10px)'
+                                    }}
+                                    onMouseOver={(e) => {
+                                        e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+                                        e.currentTarget.style.transform = 'translateY(-2px)';
+                                    }}
+                                    onMouseOut={(e) => {
+                                        e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                    }}
+                                >
+                                    <span style={{ fontSize: '16px' }}>📺</span> Open TV Display
+                                </button>
+                                <div className="staff-counter" style={{ 
+                                    textAlign: 'right', 
+                                    whiteSpace: 'nowrap', 
+                                    paddingLeft: '16px',
+                                    borderLeft: '1px solid rgba(255,255,255,0.1)',
+                                    marginLeft: '4px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    justifyContent: 'center'
+                                }}>
+                                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '2px', fontWeight: '700' }}>Active Staff</div>
+                                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#FFF', lineHeight: '1' }}>{busyTokens.length} / {staffList.length}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="quick-controls-grid" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '32px', alignItems: 'center' }}>
+                            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '24px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '16px', fontWeight: '600' }}>NEXT IN LINE</div>
+                                {pendingTokens.length > 0 ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                                        <div style={{ width: '60px', height: '60px', background: '#FFF', color: '#000', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: '900' }}>
+                                            Q{pendingTokens[0].token_number}
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: '20px', fontWeight: '800' }}>{pendingTokens[0].customer_name || 'Guest User'}</div>
+                                            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>
+                                                {pendingTokens[0].services_selected?.length || 0} services • Waiting {Math.floor((new Date() - new Date(pendingTokens[0].created_at)) / 60000)}m
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div style={{ color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>No customers waiting</div>
+                                )}
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', height: '100%' }}>
+                                <button 
+                                    onClick={() => handleSkip(pendingTokens[0])}
+                                    disabled={loading || pendingTokens.length === 0}
+                                    style={{ 
+                                        background: 'rgba(255,255,255,0.08)', 
+                                        color: '#FFFFFF', 
+                                        border: '1px solid rgba(255,255,255,0.1)', 
+                                        padding: '24px', 
+                                        borderRadius: '24px', 
+                                        fontSize: '18px', 
+                                        fontWeight: '800', 
+                                        cursor: 'pointer',
+                                        transition: 'all 0.3s ease',
+                                        opacity: (loading || pendingTokens.length === 0) ? 0.3 : 1,
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '8px'
+                                    }}
+                                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}
+                                    onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                                >
+                                    <span style={{ fontSize: '20px' }}>⏭️</span>
+                                    <span>SKIP</span>
+                                </button>
+
+                                <button 
+                                    onClick={handleStartNext}
+                                    disabled={loading || pendingTokens.length === 0 || availableStaff.length === 0}
+                                    style={{ 
+                                        background: '#FFFFFF', 
+                                        color: '#000000', 
+                                        border: 'none', 
+                                        padding: '24px', 
+                                        borderRadius: '24px', 
+                                        fontSize: '18px', 
+                                        fontWeight: '950', 
+                                        cursor: 'pointer',
+                                        transition: 'all 0.3s ease',
+                                        opacity: (loading || pendingTokens.length === 0 || availableStaff.length === 0) ? 0.3 : 1,
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '8px',
+                                        boxShadow: '0 10px 20px rgba(0,0,0,0.2)'
+                                    }}
+                                >
+                                    <span style={{ fontSize: '20px' }}>▶️</span>
+                                    <span>CALL NEXT</span>
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                )}
 
                 <div className="stats-grid">
                     <div className="stat-card premium-card" style={{ background: 'rgba(16, 185, 129, 0.03)', borderColor: 'rgba(16, 185, 129, 0.1)' }}>
@@ -826,20 +1269,22 @@ const Dashboard = () => {
                                     <h2 className="section-title" style={{ fontSize: '24px', fontWeight: '800', margin: 0 }}>Queue Flow</h2>
                                     <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>Monitor live tokens and staff availability</p>
                                 </div>
-                                <div className="staff-actions">
-                                    <button 
-                                        onClick={() => window.open(`/display/${currentShopId}`, '_blank')} 
-                                        className="premium-btn btn-outline"
-                                    >
-                                        📺 Display Mode
-                                    </button>
-                                    <button 
-                                        onClick={() => setIsWalkinModalOpen(true)} 
-                                        className="premium-btn btn-primary"
-                                    >
-                                        ➕ New Walk-in
-                                    </button>
-                                </div>
+                                {!isOwner && (
+                                    <div className="staff-actions">
+                                        <button 
+                                            onClick={() => window.open(`/display/${currentShopId}`, '_blank')} 
+                                            className="premium-btn btn-outline"
+                                        >
+                                            📺 Display Mode
+                                        </button>
+                                        <button 
+                                            onClick={() => setIsWalkinModalOpen(true)} 
+                                            className="premium-btn btn-primary"
+                                        >
+                                            ➕ New Walk-in
+                                        </button>
+                                    </div>
+                                )}
                             </div>
 
                             <div style={{ marginBottom: '48px' }}>
@@ -1005,18 +1450,11 @@ const Dashboard = () => {
                                 <h2 className="section-title">Staff Management</h2>
                             </div>
                             
-                             <form onSubmit={createStaff} className="content-card" style={{ marginBottom: '40px', background: 'rgba(0,0,0,0.2)', padding: '24px', borderRadius: '20px', border: '1px solid var(--glass-border)' }}>
-                                <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', color: 'var(--text-muted)' }}>➕ Add New Staff</h3>
-                                <div className="responsive-form">
-                                    <div style={{ flex: 1 }}>
-                                        <input type="text" placeholder="Full Name" required value={staffForm.name} onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })} className="form-input" />
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <input type="text" placeholder="Role (e.g. Barber)" value={staffForm.role} onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value })} className="form-input" />
-                                    </div>
-                                    <button type="submit" className="premium-btn btn-primary" style={{ height: '45px' }}>Add Staff</button>
-                                </div>
-                            </form>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '24px' }}>
+                                <button onClick={() => { setStaffForm(EMPTY_STAFF_FORM); setEditingStaff(null); setShowStaffModal(true); }} className="premium-btn btn-primary">
+                                    ➕ Add New Staff
+                                </button>
+                            </div>
 
                             <div className="staff-grid">
                                 {staffList.map(s => (
@@ -1029,7 +1467,7 @@ const Dashboard = () => {
                                             </div>
                                         </div>
                                         <div style={{ display: 'flex', gap: '8px' }}>
-                                            <button onClick={() => setEditingStaff(s)} className="premium-btn btn-outline" style={{ padding: '6px', minWidth: '36px' }}>✏️</button>
+                                            <button onClick={() => { setEditingStaff(s); setShowStaffModal(true); }} className="premium-btn btn-outline" style={{ padding: '6px', minWidth: '36px' }}>✏️</button>
                                             <button onClick={() => handleToggleStaffVisibility(s.id, s.is_active !== false)} className="premium-btn btn-outline" style={{ padding: '6px', minWidth: '36px' }}>
                                                 {s.is_active !== false ? '👁️' : '🫥'}
                                             </button>
@@ -1041,6 +1479,85 @@ const Dashboard = () => {
                         </div>
                     )}
 
+                    {/* PROFILE TAB */}
+                    {activeTab === 'profile' && (
+                        <div>
+                            <div className="section-header">
+                                <h2 className="section-title">Shop Profile</h2>
+                            </div>
+                            
+                            <form onSubmit={handleUpdateShopProfile} className="content-card" style={{ marginBottom: '40px', background: 'rgba(0,0,0,0.2)', padding: '24px', borderRadius: '20px', border: '1px solid var(--glass-border)' }}>
+                                <div className="form-group" style={{ marginBottom: '20px' }}>
+                                    <label className="form-label" style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>About the Shop</label>
+                                    <textarea 
+                                        className="form-input" 
+                                        rows="4" 
+                                        placeholder="Describe your shop..."
+                                        value={shopProfileForm.about_text}
+                                        onChange={(e) => setShopProfileForm({...shopProfileForm, about_text: e.target.value})}
+                                        style={{ width: '100%', resize: 'vertical' }}
+                                    ></textarea>
+                                </div>
+                                
+                                <div className="form-group" style={{ marginBottom: '20px' }}>
+                                    <label className="form-label" style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>Amenities (comma separated)</label>
+                                    <input 
+                                        type="text" 
+                                        className="form-input" 
+                                        placeholder="e.g. WiFi, AC, Free Parking, Coffee"
+                                        value={shopProfileForm.amenities}
+                                        onChange={(e) => setShopProfileForm({...shopProfileForm, amenities: e.target.value})}
+                                        style={{ width: '100%' }}
+                                    />
+                                </div>
+
+                                <div className="form-group" style={{ marginBottom: '24px' }}>
+                                    <label className="form-label" style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>Gallery Images</label>
+                                    
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+                                        {shopProfileForm.gallery_urls?.map((url, idx) => (
+                                            <div key={idx} style={{ position: 'relative', aspectRatio: '1', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+                                                <img src={url} alt={`Gallery ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => removeGalleryImage(idx)}
+                                                    style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+                                        ))}
+                                        
+                                        <div style={{ aspectRatio: '1', borderRadius: '12px', border: '1px dashed var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.02)', position: 'relative', cursor: 'pointer', overflow: 'hidden' }}>
+                                            {uploadingImage ? (
+                                                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Uploading...</span>
+                                            ) : (
+                                                <>
+                                                    <span style={{ fontSize: '24px', color: 'var(--text-muted)' }}>+</span>
+                                                    <input 
+                                                        type="file" 
+                                                        accept="image/*" 
+                                                        onChange={handleGalleryUpload}
+                                                        style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+                                                    />
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button 
+                                    type="submit" 
+                                    className="premium-btn btn-primary" 
+                                    disabled={savingProfile}
+                                    style={{ width: '100%', height: '48px' }}
+                                >
+                                    {savingProfile ? 'Saving...' : 'Save Profile'}
+                                </button>
+                            </form>
+                        </div>
+                    )}
+
                     {/* SERVICES TAB */}
                     {activeTab === 'services' && (
                         <div>
@@ -1048,13 +1565,54 @@ const Dashboard = () => {
                                 <h2 className="section-title">Services</h2>
                             </div>
 
-                             <form onSubmit={createService} className="content-card" style={{ marginBottom: '40px', background: 'rgba(0,0,0,0.2)', padding: '24px', borderRadius: '20px', border: '1px solid var(--glass-border)' }}>
+                             <form onSubmit={createService} className="content-card" style={{ marginBottom: '40px', background: '#F9F9F9', padding: '24px', borderRadius: '20px', border: '1px solid #EEEEEE' }}>
                                 <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', color: 'var(--text-muted)' }}>➕ Add New Service</h3>
-                                <div className="responsive-form">
-                                    <input type="text" placeholder="Service Name" required value={serviceForm.name} onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })} className="form-input" style={{ flex: 2 }} />
-                                    <input type="number" placeholder="Price (₹)" required value={serviceForm.price} onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })} className="form-input" style={{ flex: 1 }} />
-                                    <input type="number" placeholder="Mins" required value={serviceForm.avg_time} onChange={(e) => setServiceForm({ ...serviceForm, avg_time: e.target.value })} className="form-input" style={{ flex: 1 }} />
-                                    <button type="submit" className="premium-btn btn-primary">Add</button>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                    <div className="responsive-form">
+                                        <input type="text" placeholder="Service Name" required value={serviceForm.name} onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })} className="form-input" style={{ flex: 2 }} />
+                                        <input type="number" placeholder="Price (₹)" required value={serviceForm.price} onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })} className="form-input" style={{ flex: 1 }} />
+                                        <input type="number" placeholder="Mins" required value={serviceForm.avg_time} onChange={(e) => setServiceForm({ ...serviceForm, avg_time: e.target.value })} className="form-input" style={{ flex: 1 }} />
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                        <select 
+                                            value={serviceForm.service_type_id} 
+                                            onChange={(e) => setServiceForm({ ...serviceForm, service_type_id: e.target.value })} 
+                                            className="form-input" 
+                                            style={{ flex: 1 }}
+                                        >
+                                            <option value="">Link to Global Service Type (Optional)</option>
+                                            {serviceTypes.map(type => (
+                                                <option key={type.id} value={type.id}>{type.name}</option>
+                                            ))}
+                                        </select>
+                                        <div style={{ position: 'relative', flex: 1 }}>
+                                            <input 
+                                                type="text" 
+                                                placeholder="Service Image URL" 
+                                                value={serviceForm.image_url} 
+                                                onChange={(e) => setServiceForm({ ...serviceForm, image_url: e.target.value })} 
+                                                className="form-input"
+                                                style={{ width: '100%', paddingRight: '40px' }}
+                                            />
+                                            <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer' }}>
+                                                📷
+                                                <input 
+                                                    type="file" 
+                                                    accept="image/*" 
+                                                    onChange={async (e) => {
+                                                        const file = e.target.files[0];
+                                                        if (!file) return;
+                                                        setUploadingImage(true);
+                                                        const url = await uploadImage(file, 'images', `services/${currentShopId}`);
+                                                        setServiceForm(prev => ({ ...prev, image_url: url }));
+                                                        setUploadingImage(false);
+                                                    }}
+                                                    style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+                                                />
+                                            </div>
+                                        </div>
+                                        <button type="submit" className="premium-btn btn-primary" style={{ height: '48px', padding: '0 32px' }}>Add Service</button>
+                                    </div>
                                 </div>
                             </form>
 
@@ -1088,13 +1646,53 @@ const Dashboard = () => {
                                 <h2 className="section-title">Products</h2>
                             </div>
 
-                             <form onSubmit={createProduct} className="content-card" style={{ marginBottom: '40px', background: 'rgba(0,0,0,0.2)', padding: '24px', borderRadius: '20px', border: '1px solid var(--glass-border)' }}>
+                             <form onSubmit={createProduct} className="content-card" style={{ marginBottom: '40px', background: '#F9F9F9', padding: '24px', borderRadius: '20px', border: '1px solid #EEEEEE' }}>
                                 <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', color: 'var(--text-muted)' }}>➕ Add New Product</h3>
                                 <div className="responsive-form">
                                     <input type="text" placeholder="Product Name" required value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} className="form-input" style={{ flex: 2 }} />
                                     <input type="number" placeholder="Price (₹)" required value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} className="form-input" style={{ flex: 1 }} />
                                     <input type="number" placeholder="Stock" required value={productForm.stock} onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })} className="form-input" style={{ flex: 1 }} />
-                                    <button type="submit" className="premium-btn btn-primary" style={{ background: 'var(--secondary)' }}>Add</button>
+                                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flex: 1 }}>
+                                        <select 
+                                            required 
+                                            value={productForm.category_id} 
+                                            onChange={(e) => setProductForm({ ...productForm, category_id: e.target.value })} 
+                                            className="form-input" 
+                                            style={{ flex: 1 }}
+                                        >
+                                            <option value="">Select Category</option>
+                                            {dbCategories.map(cat => (
+                                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                            ))}
+                                        </select>
+                                        <div style={{ position: 'relative', flex: 1 }}>
+                                            <input 
+                                                type="text" 
+                                                placeholder="Product Image URL" 
+                                                value={productForm.image_url} 
+                                                onChange={(e) => setProductForm({ ...productForm, image_url: e.target.value })} 
+                                                className="form-input"
+                                                style={{ width: '100%', paddingRight: '40px' }}
+                                            />
+                                            <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer' }}>
+                                                📷
+                                                <input 
+                                                    type="file" 
+                                                    accept="image/*" 
+                                                    onChange={async (e) => {
+                                                        const file = e.target.files[0];
+                                                        if (!file) return;
+                                                        setUploadingImage(true);
+                                                        const url = await uploadImage(file, 'images', `products/${currentShopId}`);
+                                                        setProductForm(prev => ({ ...prev, image_url: url }));
+                                                        setUploadingImage(false);
+                                                    }}
+                                                    style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+                                                />
+                                            </div>
+                                        </div>
+                                        <button type="submit" className="premium-btn btn-primary" style={{ height: '48px', padding: '0 32px' }}>Add Product</button>
+                                    </div>
                                 </div>
                             </form>
 
@@ -1506,22 +2104,105 @@ const Dashboard = () => {
                 </div>
             )}
 
-            {/* EDIT STAFF MODAL */}
-            {editingStaff && (
+            {/* STAFF MODAL (Add/Edit) */}
+            {showStaffModal && (
                 <div className="modal-overlay">
-                    <form onSubmit={handleUpdateStaff} className="modal-content">
-                        <h2 className="section-title" style={{ fontSize: '24px', marginBottom: '24px' }}>Edit Staff</h2>
-                        <div className="form-group">
-                            <label className="form-label">Name</label>
-                            <input type="text" value={editingStaff.name} onChange={(e) => setEditingStaff({...editingStaff, name: e.target.value})} className="form-input" required />
+                    <form onSubmit={editingStaff ? handleUpdateStaff : createStaff} className="modal-content" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+                        <h2 className="section-title" style={{ fontSize: '24px', marginBottom: '24px' }}>
+                            {editingStaff ? 'Edit Barber Profile' : 'Add New Barber'}
+                        </h2>
+                        
+                        <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+                            <div className="form-group" style={{ flex: 1 }}>
+                                <label className="form-label">Name</label>
+                                <input type="text" value={editingStaff ? editingStaff.name : staffForm.name} onChange={(e) => editingStaff ? setEditingStaff({...editingStaff, name: e.target.value}) : setStaffForm({...staffForm, name: e.target.value})} className="form-input" required />
+                            </div>
+                            <div className="form-group" style={{ flex: 1 }}>
+                                <label className="form-label">Role</label>
+                                <input type="text" value={editingStaff ? editingStaff.role : staffForm.role} onChange={(e) => editingStaff ? setEditingStaff({...editingStaff, role: e.target.value}) : setStaffForm({...staffForm, role: e.target.value})} className="form-input" placeholder="e.g. Master Barber" />
+                            </div>
                         </div>
-                        <div className="form-group">
-                            <label className="form-label">Role</label>
-                            <input type="text" value={editingStaff.role} onChange={(e) => setEditingStaff({...editingStaff, role: e.target.value})} className="form-input" />
+
+                        <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+                            <div className="form-group" style={{ flex: 1 }}>
+                                <label className="form-label">Rating (0-5)</label>
+                                <input type="number" step="0.1" min="0" max="5" value={editingStaff ? editingStaff.rating : staffForm.rating} onChange={(e) => editingStaff ? setEditingStaff({...editingStaff, rating: e.target.value}) : setStaffForm({...staffForm, rating: e.target.value})} className="form-input" />
+                            </div>
+                            <div className="form-group" style={{ flex: 1 }}>
+                                <label className="form-label">Experience (Years)</label>
+                                <input type="number" value={editingStaff ? editingStaff.experience_years : staffForm.experience_years} onChange={(e) => editingStaff ? setEditingStaff({...editingStaff, experience_years: e.target.value}) : setStaffForm({...staffForm, experience_years: e.target.value})} className="form-input" />
+                            </div>
                         </div>
+
+                        <div className="form-group" style={{ marginBottom: '16px' }}>
+                            <label className="form-label">Skills (Comma separated)</label>
+                            <input type="text" value={editingStaff ? (Array.isArray(editingStaff.skills) ? editingStaff.skills.join(', ') : editingStaff.skills) : staffForm.skills} onChange={(e) => editingStaff ? setEditingStaff({...editingStaff, skills: e.target.value}) : setStaffForm({...staffForm, skills: e.target.value})} className="form-input" placeholder="Fade, Scissor Cut, Beard Trim" />
+                        </div>
+
+                        <div className="form-group" style={{ marginBottom: '16px' }}>
+                            <label className="form-label">Certificates (Text, comma separated)</label>
+                            <input type="text" value={editingStaff ? (Array.isArray(editingStaff.certificates) ? editingStaff.certificates.join(', ') : editingStaff.certificates) : staffForm.certificates} onChange={(e) => editingStaff ? setEditingStaff({...editingStaff, certificates: e.target.value}) : setStaffForm({...staffForm, certificates: e.target.value})} className="form-input" placeholder="Master Barber 2023, Color Specialist" />
+                        </div>
+
+                        <div className="form-group" style={{ marginBottom: '16px' }}>
+                            <label className="form-label">Certificate Photos</label>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                <input type="file" multiple accept="image/*" onChange={(e) => handleStaffMultiImageUpload(e, 'certificate_urls', !!editingStaff)} style={{ fontSize: '13px' }} disabled={uploadingImage} />
+                                {uploadingImage && <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Uploading...</span>}
+                            </div>
+                            {(editingStaff ? editingStaff.certificate_urls : staffForm.certificate_urls)?.length > 0 && (
+                                <div style={{ marginTop: '10px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                    {(editingStaff ? editingStaff.certificate_urls : staffForm.certificate_urls).map((url, idx) => (
+                                        <div key={idx} style={{ position: 'relative' }}>
+                                            <img src={url} alt={`Cert ${idx}`} style={{ height: '60px', borderRadius: '8px', border: '1px solid var(--glass-border)' }} />
+                                            <button type="button" onClick={() => removeStaffMultiImage('certificate_urls', idx, !!editingStaff)} style={{ position: 'absolute', top: -5, right: -5, background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>&times;</button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="form-group" style={{ marginBottom: '16px' }}>
+                            <label className="form-label">Styling Portfolio (Gallery Photos)</label>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                <input type="file" multiple accept="image/*" onChange={(e) => handleStaffMultiImageUpload(e, 'gallery_urls', !!editingStaff)} style={{ fontSize: '13px' }} disabled={uploadingImage} />
+                                {uploadingImage && <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Uploading...</span>}
+                            </div>
+                            {(editingStaff ? editingStaff.gallery_urls : staffForm.gallery_urls)?.length > 0 && (
+                                <div style={{ marginTop: '10px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                    {(editingStaff ? editingStaff.gallery_urls : staffForm.gallery_urls).map((url, idx) => (
+                                        <div key={idx} style={{ position: 'relative' }}>
+                                            <img src={url} alt={`Gallery ${idx}`} style={{ height: '60px', borderRadius: '8px', border: '1px solid var(--glass-border)' }} />
+                                            <button type="button" onClick={() => removeStaffMultiImage('gallery_urls', idx, !!editingStaff)} style={{ position: 'absolute', top: -5, right: -5, background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>&times;</button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="form-group" style={{ marginBottom: '16px' }}>
+                            <label className="form-label">Past Saloons (Comma separated)</label>
+                            <input type="text" value={editingStaff ? (Array.isArray(editingStaff.past_saloons) ? editingStaff.past_saloons.join(', ') : editingStaff.past_saloons) : staffForm.past_saloons} onChange={(e) => editingStaff ? setEditingStaff({...editingStaff, past_saloons: e.target.value}) : setStaffForm({...staffForm, past_saloons: e.target.value})} className="form-input" placeholder="The Vintage Barbershop, Elite Cutz" />
+                        </div>
+
+                        <div className="form-group" style={{ marginBottom: '16px' }}>
+                            <label className="form-label">Profile Image</label>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                <input type="file" accept="image/*" onChange={(e) => handleStaffImageUpload(e, !!editingStaff)} style={{ fontSize: '13px' }} disabled={uploadingImage} />
+                                {uploadingImage && <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Uploading...</span>}
+                            </div>
+                            {(editingStaff ? editingStaff.image_url : staffForm.image_url) && (
+                                <div style={{ marginTop: '10px' }}>
+                                    <img src={editingStaff ? editingStaff.image_url : staffForm.image_url} alt="Preview" style={{ height: '60px', borderRadius: '8px', border: '1px solid var(--glass-border)' }} />
+                                </div>
+                            )}
+                        </div>
+
                         <div className="responsive-form" style={{ marginTop: '32px' }}>
-                            <button type="button" onClick={() => setEditingStaff(null)} className="premium-btn btn-outline" style={{ flex: 1 }}>Cancel</button>
-                            <button type="submit" className="premium-btn btn-primary" style={{ flex: 2 }}>Save Changes</button>
+                            <button type="button" onClick={() => { setShowStaffModal(false); setEditingStaff(null); }} className="premium-btn btn-outline" style={{ flex: 1 }}>Cancel</button>
+                            <button type="submit" disabled={uploadingImage} className="premium-btn btn-primary" style={{ flex: 2 }}>
+                                {editingStaff ? 'Save Changes' : 'Create Barber'}
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -1536,13 +2217,51 @@ const Dashboard = () => {
                             <label className="form-label">Name</label>
                             <input type="text" value={editingService.name} onChange={(e) => setEditingService({...editingService, name: e.target.value})} className="form-input" required />
                         </div>
-                        <div className="form-group">
-                            <label className="form-label">Price (₹)</label>
-                            <input type="number" value={editingService.price} onChange={(e) => setEditingService({...editingService, price: e.target.value})} className="form-input" required />
+                        <div style={{ display: 'flex', gap: '16px' }}>
+                            <div className="form-group" style={{ flex: 1 }}>
+                                <label className="form-label">Price (₹)</label>
+                                <input type="number" value={editingService.price} onChange={(e) => setEditingService({...editingService, price: e.target.value})} className="form-input" required />
+                            </div>
+                            <div className="form-group" style={{ flex: 1 }}>
+                                <label className="form-label">Avg Time (mins)</label>
+                                <input type="number" value={editingService.avg_time} onChange={(e) => setEditingService({...editingService, avg_time: e.target.value})} className="form-input" required />
+                            </div>
                         </div>
                         <div className="form-group">
-                            <label className="form-label">Avg Time (mins)</label>
-                            <input type="number" value={editingService.avg_time} onChange={(e) => setEditingService({...editingService, avg_time: e.target.value})} className="form-input" required />
+                            <label className="form-label">Global Type</label>
+                            <select 
+                                value={editingService.service_type_id || ''} 
+                                onChange={(e) => setEditingService({...editingService, service_type_id: e.target.value})} 
+                                className="form-input"
+                                style={{ background: '#FFF', color: '#000' }}
+                            >
+                                <option value="">None (Generic)</option>
+                                {serviceTypes.map(type => (
+                                    <option key={type.id} value={type.id}>{type.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Service Image URL</label>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <input type="text" value={editingService.image_url || ''} onChange={(e) => setEditingService({...editingService, image_url: e.target.value})} className="form-input" placeholder="https://..." style={{ flex: 1 }} />
+                                <div style={{ position: 'relative', width: '48px', height: '48px', background: 'var(--glass-bg)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                    📷
+                                    <input 
+                                        type="file" 
+                                        accept="image/*" 
+                                        onChange={async (e) => {
+                                            const file = e.target.files[0];
+                                            if (!file) return;
+                                            setUploadingImage(true);
+                                            const url = await uploadImage(file, 'images', `services/${currentShopId}`);
+                                            setEditingService(prev => ({ ...prev, image_url: url }));
+                                            setUploadingImage(false);
+                                        }}
+                                        style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+                                    />
+                                </div>
+                            </div>
                         </div>
                         <div className="responsive-form" style={{ marginTop: '32px' }}>
                             <button type="button" onClick={() => setEditingService(null)} className="premium-btn btn-outline" style={{ flex: 1 }}>Cancel</button>
@@ -1568,6 +2287,43 @@ const Dashboard = () => {
                         <div className="form-group">
                             <label className="form-label">Stock</label>
                             <input type="number" value={editingProduct.stock} onChange={(e) => setEditingProduct({...editingProduct, stock: e.target.value})} className="form-input" required />
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Category</label>
+                            <select 
+                                value={editingProduct.category_id || ''} 
+                                onChange={(e) => setEditingProduct({...editingProduct, category_id: e.target.value})} 
+                                className="form-input"
+                                style={{ background: '#FFF', color: '#000' }}
+                            >
+                                <option value="">Select Category</option>
+                                {dbCategories.map(cat => (
+                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Product Image URL</label>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <input type="text" value={editingProduct.image_url || ''} onChange={(e) => setEditingProduct({...editingProduct, image_url: e.target.value})} className="form-input" placeholder="https://..." style={{ flex: 1 }} />
+                                <div style={{ position: 'relative', width: '48px', height: '48px', background: 'var(--glass-bg)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                    📷
+                                    <input 
+                                        type="file" 
+                                        accept="image/*" 
+                                        onChange={async (e) => {
+                                            const file = e.target.files[0];
+                                            if (!file) return;
+                                            setUploadingImage(true);
+                                            const url = await uploadImage(file, 'images', `products/${currentShopId}`);
+                                            setEditingProduct(prev => ({ ...prev, image_url: url }));
+                                            setUploadingImage(false);
+                                        }}
+                                        style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+                                    />
+                                </div>
+                            </div>
                         </div>
                         <div className="responsive-form" style={{ marginTop: '32px' }}>
                             <button type="button" onClick={() => setEditingProduct(null)} className="premium-btn btn-outline" style={{ flex: 1 }}>Cancel</button>

@@ -8,11 +8,13 @@ export const CartProvider = ({ children }) => {
         return savedCart ? JSON.parse(savedCart) : [];
     });
 
+    const [isCartOpen, setIsCartOpen] = useState(false);
+
     useEffect(() => {
         localStorage.setItem('cart', JSON.stringify(cart));
     }, [cart]);
 
-    const addToCart = (product) => {
+    const addToCart = (product, openDrawer = true) => {
         setCart(prevCart => {
             const existingItem = prevCart.find(item => item.id === product.id);
             if (existingItem) {
@@ -24,6 +26,7 @@ export const CartProvider = ({ children }) => {
             }
             return [...prevCart, { ...product, quantity: 1 }];
         });
+        if (openDrawer) setIsCartOpen(true);
     };
 
     const removeFromCart = (productId) => {
@@ -62,7 +65,9 @@ export const CartProvider = ({ children }) => {
             updateQuantity,
             clearCart,
             getCartTotal,
-            getCartCount
+            getCartCount,
+            isCartOpen,
+            setIsCartOpen
         }}>
             {children}
         </CartContext.Provider>

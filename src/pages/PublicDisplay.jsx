@@ -1,310 +1,308 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import CountdownTimer from '../components/common/CountdownTimer';
-
-const AVG_TIME_MINS = 15;
+import { motion, AnimatePresence } from 'framer-motion';
 
 const PublicDisplay = () => {
     const { shopId } = useParams();
     const [shop, setShop] = useState(null);
     const [tokens, setTokens] = useState([]);
-    const [staff, setStaff] = useState([]);
-    const [services, setServices] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [currentTime, setCurrentTime] = useState(new Date());
-    const [countdownSeconds, setCountdownSeconds] = useState(0);
 
-    // Clock and Countdown Ticker
     useEffect(() => {
-        const timer = setInterval(() => {
-            setCurrentTime(new Date());
-            setCountdownSeconds(prev => Math.max(0, prev - 1));
-        }, 1000);
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
 
     const fetchData = async () => {
         try {
-            // Fetch Shop Info
-            const { data: shopData, error: shopError } = await supabase
-                .from('shops')
-                .select('*')
-                .eq('id', shopId)
-                .single();
-            if (shopError) throw shopError;
-            setShop(shopData);
+            const [shopRes, tokensRes] = await Promise.all([
+                supabase.from('shops').select('*').eq('id', shopId).single(),
+                supabase.from('tokens')
+                    .select('*, staff:staff_id(name)')
+                    .eq('shop_id', shopId)
+                    .in('status', ['pending', 'called', 'serving'])
+                    .order('token_number', { ascending: true })
+            ]);
 
-            // Fetch Staff
-            const { data: staffData } = await supabase
-                .from('staff')
-                .select('*')
-                .eq('shop_id', shopId);
-            setStaff(staffData || []);
-
-            // Fetch Services
-            const { data: serviceData } = await supabase
-                .from('services')
-                .select('*')
-                .eq('shop_id', shopId);
-            setServices(serviceData || []);
-
-            // Fetch Tokens
-            const { data: queueData, error: queueError } = await supabase
-                .from('tokens')
-                .select('*')
-                .eq('shop_id', shopId)
-                .in('status', ['pending', 'called', 'serving'])
-                .order('token_number', { ascending: true });
-            if (queueError) throw queueError;
-            setTokens(queueData || []);
-
-            // Initialize countdown based on first pending token
-            const upNext = (queueData || []).filter(t => t.status === 'pending');
-            if (upNext.length > 0) {
-                const firstToken = upNext[0];
-                const activeStaffCount = (staffData || []).filter(s => s.is_active).length || 1;
-                // Simple estimate for the first person
-                setCountdownSeconds(AVG_TIME_MINS * 60); 
-            }
-
-            // - [x] Redesign PublicDisplay.jsx layout to match the "TV Mode" billboard style
-            // - [x] Implement deep purple/blue gradient background with glassmorphism
-            // - [x] Create huge centered "Now Serving" section
-            // - [x] Implement horizontal "Next" row for upcoming tokens
-            // - [x] Add smooth transitions and animations
-            // - [x] Ensure full-screen coverage and perfect alignment
-            // - [x] Verify real-time updates and ETA accuracy in the new layout
-            // - [x] Finalize symmetrical split-screen layout for commercial use
-
+            if (shopRes.data) setShop(shopRes.data);
+            if (tokensRes.data) setTokens(tokensRes.data);
             setLoading(false);
         } catch (err) {
             console.error('Error fetching display data:', err);
-            setError(err.message);
-            setLoading(false);
         }
     };
 
     useEffect(() => {
         if (!shopId) return;
         fetchData();
-
-        // Realtime updates
-        const channel = supabase
-            .channel(`public-display-${shopId}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'tokens', filter: `shop_id=eq.${shopId}` }, () => {
-                fetchData();
-            })
+        const channel = supabase.channel(`public-${shopId}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tokens', filter: `shop_id=eq.${shopId}` }, fetchData)
             .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
+        return () => supabase.removeChannel(channel);
     }, [shopId]);
 
-    const nowServing = useMemo(() => tokens.filter(t => t.status === 'called' || t.status === 'serving'), [tokens]);
+    const nowServing = useMemo(() => tokens.filter(t => ['called', 'serving'].includes(t.status)), [tokens]);
     const upNext = useMemo(() => tokens.filter(t => t.status === 'pending'), [tokens]);
 
-    // Enhanced Estimation Logic
-    const getTokenDuration = (token) => {
-        if (!token.services_selected || !Array.isArray(token.services_selected) || token.services_selected.length === 0) {
-            return AVG_TIME_MINS;
-        }
-        const serviceTimes = token.services_selected.map(sid => {
-            const s = services.find(serv => serv.id === sid || serv.name === sid);
-            return s ? s.avg_time : AVG_TIME_MINS;
-        });
-        return serviceTimes.reduce((a, b) => a + b, 0);
-    };
-
-    const getEstimatedTarget = (token, index) => {
-        const staffId = token.preferred_staff_id;
-        const activeStaffList = staff.filter(s => s.is_active);
-        const staffCount = activeStaffList.length || 1;
-
-        if (staffId) {
-            // Priority Staff Logic
-            const currentlyServing = nowServing.find(t => t.staff_id === staffId);
-            let baseMins = 0;
-            if (currentlyServing) {
-                const expectedDuration = getTokenDuration(currentlyServing);
-                const calledAt = new Date(currentlyServing.called_at || currentlyServing.created_at);
-                const elapsedMins = (Date.now() - calledAt.getTime()) / 60000;
-                baseMins = Math.max(1, Math.ceil(expectedDuration - elapsedMins));
-            }
-
-            const ahead = upNext.filter(t => t.preferred_staff_id === staffId && t.token_number < token.token_number);
-            const totalWait = baseMins + ahead.reduce((acc, t) => acc + getTokenDuration(t), 0);
-            return new Date(Date.now() + totalWait * 60000).toISOString();
-        } else {
-            // General Queue Logic
-            const ahead = upNext.filter(t => !t.preferred_staff_id && t.token_number < token.token_number);
-            const totalPendingMins = ahead.reduce((acc, t) => acc + getTokenDuration(t), 0);
-            const avgMins = Math.ceil(totalPendingMins / staffCount);
-            return new Date(Date.now() + Math.max(AVG_TIME_MINS, avgMins) * 60000).toISOString();
-        }
-    };
-
-    const formatTime = (totalSeconds) => {
-        const mins = Math.floor(totalSeconds / 60);
-        const secs = totalSeconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    };
+    // For the centerpiece, we take the first "now serving" token
+    const mainToken = nowServing[0];
 
     if (loading) return (
-        <div className="flex items-center justify-center min-h-screen bg-slate-900 text-white">
-            <div className="text-center animate-pulse">
-                <div className="text-6xl mb-6">⌛</div>
-                <p className="text-2xl font-bold tracking-tight">Syncing Queue Status...</p>
-            </div>
-        </div>
-    );
-
-    if (error) return (
-        <div className="flex items-center justify-center min-h-screen bg-slate-900 text-white p-6">
-            <div className="premium-card p-10 max-w-lg text-center">
-                <div className="text-5xl mb-6">⚠️</div>
-                <h2 className="text-2xl font-bold text-red-400 mb-4">Display Connection Error</h2>
-                <p className="text-slate-400 mb-8">{error}</p>
-                <Link to="/" className="btn-primary inline-block">Return to Safety</Link>
-            </div>
+        <div style={{ height: '100vh', background: '#0D0B14', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <motion.div 
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                style={{ width: 40, height: 40, border: '3px solid #FF4B6E', borderTopColor: 'transparent', borderRadius: '50%' }}
+            />
         </div>
     );
 
     return (
-        <div className="h-screen w-screen bg-[#0a0a0a] text-white flex items-center justify-center font-inter overflow-hidden relative select-none">
-            {/* Minimal Hero Background */}
-            <div 
-                className="absolute inset-0 z-0 overflow-hidden"
-                style={{ 
-                    backgroundImage: `url('/image1.webp')`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                }}
-            >
-                <div className="absolute inset-0 bg-black/50 z-10" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] z-20" />
-            </div>
-            
-            {/* Centered Info Text */}
-            <main className="relative z-30 flex flex-col items-center justify-center text-center p-6 w-full max-w-6xl">
-                
-                {/* Brand Header */}
-                <div className="mb-12 animate-fade-in-up">
-                    <div className="flex items-center justify-center gap-4">
-                        <div className="h-[1px] w-12 bg-gradient-to-r from-transparent to-purple-500/50" />
-                        <span className="text-xl font-black tracking-[0.8em] text-white/90">TRIMTIME</span>
-                        <div className="h-[1px] w-12 bg-gradient-to-l from-transparent to-purple-500/50" />
+        <div style={{
+            height: '100vh',
+            width: '100vw',
+            background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
+            color: '#FFFFFF',
+            fontFamily: "'Inter', sans-serif",
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '2vw 4vw',
+            boxSizing: 'border-box',
+            overflow: 'hidden',
+            position: 'relative'
+        }}>
+            {/* Top Bar */}
+            {/* Sleek Top Bar */}
+            <header style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                zIndex: 10, 
+                marginBottom: '4vh',
+                background: 'rgba(255,255,255,0.03)',
+                padding: '16px 28px',
+                borderRadius: '24px',
+                border: '1px solid rgba(255,255,255,0.08)',
+                backdropFilter: 'blur(15px)',
+                boxShadow: '0 15px 35px rgba(0,0,0,0.2)'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                    <div style={{ 
+                        width: '54px', height: '54px', 
+                        background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.03))', 
+                        borderRadius: '16px', 
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '26px',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        boxShadow: '0 8px 25px rgba(0,0,0,0.2)'
+                    }}>
+                        🏛️
+                    </div>
+                    <div>
+                        <div style={{ fontSize: '10px', fontWeight: '900', color: '#FF4B6E', letterSpacing: '3px', marginBottom: '2px', textTransform: 'uppercase', opacity: 0.9 }}>PREMIUM PARTNER</div>
+                        <h1 style={{ fontSize: '24px', fontWeight: '600', margin: 0, color: '#FFF', letterSpacing: '-0.5px' }}>{shop?.name || 'LaChak Salon'}</h1>
                     </div>
                 </div>
-                           {/* Now Serving Section */}
-                <div className="w-full relative z-10 mb-20">
-                    <div className="flex items-center justify-center gap-4 mb-12 opacity-60">
-                        <div className="h-[1px] w-8 bg-purple-500/50" />
-                        <span className="text-purple-400 font-bold uppercase tracking-[0.8em] text-[10px]">Live Now</span>
-                        <div className="h-[1px] w-8 bg-purple-500/50" />
+                <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '32px', fontWeight: '950', color: '#FFF', lineHeight: '1', letterSpacing: '-1.5px', textShadow: '0 0 20px rgba(255,255,255,0.1)' }}>
+                        {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
                     </div>
-
-                    <div className="flex flex-wrap justify-center gap-16 md:gap-24 animate-token-pop">
-                        {nowServing.length > 0 ? (
-                            nowServing.map((token) => (
-                                <div key={token.id} className="relative flex flex-col items-center">
-                                    {/* Individual Glow */}
-                                    <div className="absolute inset-0 bg-purple-600/10 blur-[100px] rounded-full scale-150" />
-                                    
-                                    <div className="relative flex flex-col items-center">
-                                        <div className="flex items-baseline mb-6">
-                                            <span className="text-[2.5rem] md:text-[3.5rem] text-purple-500 font-serif italic leading-none mr-1 drop-shadow-xl opacity-80">#</span>
-                                            <span className="text-[5rem] md:text-[8rem] font-black text-white leading-none tracking-tighter drop-shadow-2xl">
-                                                {token.token_number}
-                                            </span>
-                                        </div>
-                                        
-                                        <div className="flex flex-col items-center mb-6">
-                                            <div className="px-6 py-2 bg-white/5 backdrop-blur-2xl rounded-full border border-white/5 shadow-xl mb-4">
-                                                <CountdownTimer 
-                                                    targetDate={new Date(new Date(token.called_at || token.created_at).getTime() + getTokenDuration(token) * 60000)} 
-                                                    size="sm"
-                                                    color="#a855f7"
-                                                />
-                                            </div>
-                                            <span className="text-white/60 text-xl md:text-2xl font-serif italic font-medium tracking-tight">
-                                                {staff.find(s => s.id === token.staff_id)?.name || 'Next Station'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="text-[4rem] md:text-[6rem] font-serif italic text-white/5 tracking-[0.5em] animate-pulse">
-                                Welcome
-                            </div>
-                        )}
+                    <div style={{ fontSize: '10px', fontWeight: '800', color: 'rgba(255,255,255,0.4)', marginTop: '6px', letterSpacing: '2.5px', textTransform: 'uppercase' }}>
+                        {currentTime.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })}
                     </div>
                 </div>
+            </header>
 
-                {/* Up Next / Waiting Line */}
-                <div className="w-full max-w-5xl animate-fade-in-up delay-500">
-                    <div className="flex items-center justify-center gap-4 mb-8 opacity-40">
-                        <div className="h-[1px] w-6 bg-white/30" />
-                        <span className="text-white font-bold uppercase tracking-[0.6em] text-[9px]">Up Next</span>
-                        <div className="h-[1px] w-6 bg-white/30" />
-                    </div>
 
-                    <div className="flex flex-wrap items-center gap-8 justify-center">
-                        {upNext.slice(0, 4).map((token, i) => {
-                            const estTime = getEstimatedTarget(token, i);
-                            const waitMins = Math.max(1, Math.ceil((new Date(estTime).getTime() - Date.now()) / 60000));
-                            return (
-                                <div key={token.id} className="group flex items-center gap-4 px-6 py-3 bg-white/[0.02] backdrop-blur-md border border-white/5 rounded-2xl hover:bg-white/[0.05] transition-all duration-500">
-                                    <div className="flex items-center gap-1">
-                                        <span className="text-purple-400 text-xs font-serif italic opacity-50">#</span>
-                                        <span className="text-2xl font-black text-white/90 tracking-tighter">{token.token_number}</span>
-                                    </div>
-                                    <div className="w-[1px] h-4 bg-white/10" />
-                                    <span className="text-white/40 font-bold text-[10px] tracking-wider uppercase">{waitMins} min</span>
+
+            {/* Main Content Area */}
+            <main style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0', overflow: 'hidden' }}>
+                <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: nowServing.length > 1 ? 'repeat(auto-fit, minmax(280px, 1fr))' : '1fr',
+                    gap: '30px',
+                    width: '100%',
+                    maxHeight: '65vh',
+                    justifyItems: 'center',
+                    alignItems: 'center'
+                }}>
+                    <AnimatePresence mode="popLayout">
+                        {nowServing.length > 0 ? nowServing.map((token) => (
+                            <motion.div
+                                key={token.id}
+                                layout
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}
+                            >
+                                <div style={{ 
+                                    background: '#FF4B6E', 
+                                    padding: '4px 15px', 
+                                    borderRadius: '100px', 
+                                    fontSize: '10px', 
+                                    fontWeight: '800',
+                                    marginBottom: '10px',
+                                    boxShadow: '0 0 20px rgba(255, 75, 110, 0.4)'
+                                }}>
+                                    NOW SERVING
                                 </div>
-                            );
-                        })}
-                        
-                        {upNext.length === 0 && nowServing.length > 0 && (
-                            <div className="opacity-10 text-[10px] font-black uppercase tracking-[1em] py-4">
-                                Relax & Enjoy
-                            </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', width: '100%', justifyContent: 'center' }}>
+                                    {/* Visualizer Left */}
+                                    <div className="visualizer" style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+                                        {[1, 2, 3].map(i => (
+                                            <motion.div 
+                                                key={i}
+                                                animate={{ height: [15, 30, 15] }}
+                                                transition={{ duration: 1 + i*0.2, repeat: Infinity }}
+                                                style={{ width: '3px', background: 'linear-gradient(to bottom, #FF4B6E, #8A2BE2)', borderRadius: '2px' }}
+                                            />
+                                        ))}
+                                    </div>
+
+                                    <div style={{ 
+                                        fontSize: nowServing.length > 3 ? '40px' : nowServing.length > 2 ? '55px' : nowServing.length > 1 ? '75px' : '110px', 
+                                        fontWeight: '950', 
+                                        lineHeight: 1, 
+                                        textShadow: '0 15px 40px rgba(0,0,0,0.6)',
+                                        letterSpacing: '-2px'
+                                    }}>
+                                        Q{token.token_number}
+                                    </div>
+
+                                    {/* Visualizer Right */}
+                                    <div className="visualizer" style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+                                        {[1, 2, 3].map(i => (
+                                            <motion.div 
+                                                key={i}
+                                                animate={{ height: [15, 30, 15] }}
+                                                transition={{ duration: 1 + (3-i)*0.2, repeat: Infinity }}
+                                                style={{ width: '3px', background: 'linear-gradient(to bottom, #8A2BE2, #FF4B6E)', borderRadius: '2px' }}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                {token.staff && (
+                                    <div style={{ fontSize: '14px', fontWeight: '700', opacity: 0.5, marginTop: '5px' }}>
+                                        {token.staff.name}
+                                    </div>
+                                )}
+                            </motion.div>
+                        )) : (
+                            <div style={{ fontSize: '40px', opacity: 0.1, fontWeight: '900', gridColumn: '1/-1' }}>WELCOME</div>
                         )}
-                    </div>
+                    </AnimatePresence>
                 </div>
             </main>
 
+            {/* Next Section */}
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '4vh' }}>
+                <div style={{ position: 'relative', width: '100%', maxWidth: '800px' }}>
+                    <div style={{ 
+                        position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)',
+                        background: '#8A2BE2', padding: '4px 15px', borderRadius: '100px', 
+                        fontSize: '10px', fontWeight: '800', zIndex: 5,
+                        boxShadow: '0 4px 10px rgba(138, 43, 226, 0.3)'
+                    }}>
+                        NEXT
+                    </div>
+                    <div style={{ 
+                        background: 'rgba(255,255,255,0.03)', 
+                        border: '1px solid rgba(255,255,255,0.1)', 
+                        borderRadius: '20px', 
+                        padding: '30px 20px',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        gap: '20px'
+                    }}>
+                        {upNext.length > 0 ? upNext.slice(0, 4).map((token, idx) => (
+                            <div key={token.id} style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                                <div style={{ fontSize: '32px', fontWeight: '700', color: '#FFF' }}>Q{token.token_number}</div>
+                                {idx < Math.min(upNext.length, 4) - 1 && (
+                                    <div style={{ width: '1px', height: '30px', background: 'rgba(255,255,255,0.1)' }} />
+                                )}
+                            </div>
+                        )) : (
+                            <div style={{ opacity: 0.3, fontWeight: '600' }}>NO UPCOMING TOKENS</div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Bottom Announcement */}
+            <footer style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', opacity: 0.7, fontSize: '14px', marginBottom: '2vh' }}>
+                <span>🔊</span>
+                <span>It's TrimTime! Token Q{mainToken?.token_number || '---'} please move to the counter.</span>
+            </footer>
+
+            {/* Trust Ticker - Refined Bottom Bar */}
+            <div style={{
+                width: '100vw',
+                marginLeft: '-4vw', 
+                background: 'rgba(0,0,0,0.4)',
+                backdropFilter: 'blur(15px)',
+                padding: '18px 0',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                borderTop: '1px solid rgba(255,255,255,0.1)',
+                zIndex: 100
+            }}>
+                <motion.div
+                    animate={{ x: ["0%", "-50%"] }}
+                    transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+                    style={{ display: 'inline-flex', gap: '60px', alignItems: 'center' }}
+                >
+                    {[1, 2].map(i => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '60px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <span style={{ fontSize: '10px', color: '#FF4B6E' }}>✦</span>
+                                <span style={{ fontSize: '13px', fontWeight: '900', letterSpacing: '3px', color: '#FFF' }}>PREMIUM GROOMING EXPERIENCE</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <span style={{ fontSize: '10px', color: '#8A2BE2' }}>✦</span>
+                                <span style={{ fontSize: '13px', fontWeight: '900', letterSpacing: '3px', color: '#FFF' }}>ZERO WAIT GUARANTEE</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <span style={{ fontSize: '10px', color: '#FF4B6E' }}>✦</span>
+                                <span style={{ fontSize: '13px', fontWeight: '900', letterSpacing: '3px', color: '#FFF' }}>YOUR TIME, RESPECTED</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <span style={{ 
+                                    fontSize: '15px', 
+                                    fontWeight: '1000', 
+                                    letterSpacing: '1px', 
+                                    color: '#FFF', 
+                                    background: 'linear-gradient(90deg, #FF4B6E, #8A2BE2)', 
+                                    padding: '6px 16px', 
+                                    borderRadius: '8px',
+                                    boxShadow: '0 0 20px rgba(255, 75, 110, 0.2)'
+                                }}>POWERED BY TRIMTIME</span>
+                            </div>
+                        </div>
+                    ))}
+                </motion.div>
+            </div>
+
+
+
             <style>
                 {`
-                    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
-                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
-
-                    .font-serif { font-family: 'Playfair Display', serif; }
-                    .font-inter { font-family: 'Inter', sans-serif; }
-
-                    @keyframes pulse-slow {
-                        0%, 100% { opacity: 0.3; transform: scale(1.2); }
-                        50% { opacity: 0.5; transform: scale(1.4); }
+                    @media (max-height: 600px) {
+                        div[style*="bottom: 0"] { display: none !important; }
                     }
-                    .animate-pulse-slow {
-                        animation: pulse-slow 10s ease-in-out infinite;
-                    }
-                    .animate-token-pop {
-                        animation: tokenPop 1s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-                    }
-                    .animate-fade-in-up {
-                        animation: fadeInUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
-                    }
-                    @keyframes tokenPop {
-                        0% { opacity: 0; transform: scale(0.9) translateY(40px); }
-                        100% { opacity: 1; transform: scale(1) translateY(0); }
-                    }
-                    @keyframes fadeInUp {
-                        from { opacity: 0; transform: translateY(40px); }
-                        to { opacity: 1; transform: translateY(0); }
+                    @media (max-height: 500px) {
+                        header { padding: 5px 0 !important; }
+                        h1 { font-size: 18px !important; }
+                        main div[style*="fontSize: 110px"] { font-size: 70px !important; }
+                        .visualizer { display: none !important; }
+                        div[style*="padding: 30px 20px"] { padding: 15px !important; }
+                        div[style*="fontSize: 32px"] { font-size: 24px !important; }
+                        footer { font-size: 11px !important; margin-top: 10px !important; }
                     }
                 `}
             </style>
@@ -313,4 +311,3 @@ const PublicDisplay = () => {
 };
 
 export default PublicDisplay;
-

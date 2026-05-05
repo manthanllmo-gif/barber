@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useShop } from '../contexts/ShopContext';
 import { useAuth } from '../contexts/AuthContext';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import CountdownTimer from '../components/common/CountdownTimer';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistance } from '../utils/geoUtils';
@@ -10,9 +10,10 @@ import { formatDistance } from '../utils/geoUtils';
 const AVG_TIME_MINS = 15;
 
 const Queue = () => {
-    const { currentShopId, shops } = useShop();
+    const { currentShopId, setCurrentShopId, shops } = useShop();
     const { user, signup, login } = useAuth();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
 
     if (!currentShopId) {
         return <Navigate to="/" />;
@@ -41,16 +42,26 @@ const Queue = () => {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
+        const urlShopId = searchParams.get('shopId');
+        const urlStaffId = searchParams.get('staffId');
+
+        if (urlShopId && urlShopId !== currentShopId) {
+            setCurrentShopId(urlShopId);
+        }
+
         if (user) {
             setCustomerName(user.user_metadata?.name || '');
             setCustomerPhone(user.user_metadata?.phone || '');
         }
 
         const fetchInitialData = async () => {
+            const activeShopId = urlShopId || currentShopId;
+            if (!activeShopId) return;
+
             const { data: queueData } = await supabase
                 .from('tokens')
                 .select('*')
-                .eq('shop_id', currentShopId)
+                .eq('shop_id', activeShopId)
                 .in('status', ['pending', 'called', 'skipped'])
                 .order('token_number', { ascending: true });
             if (queueData) setActiveTokens(queueData);
@@ -58,32 +69,41 @@ const Queue = () => {
             const { data: serviceData } = await supabase
                 .from('services')
                 .select('*')
-                .eq('shop_id', currentShopId)
+                .eq('shop_id', activeShopId)
                 .neq('is_active', false);
             if (serviceData) setServices(serviceData);
 
             const { data: staffData } = await supabase
                 .from('staff')
                 .select('*')
-                .eq('shop_id', currentShopId)
+                .eq('shop_id', activeShopId)
                 .eq('is_active', true);
-            if (staffData) setActiveStaff(staffData);
+            
+            if (staffData) {
+                setActiveStaff(staffData);
+                if (urlStaffId) {
+                    setSelectedStaffId(urlStaffId);
+                }
+            }
         };
 
         fetchInitialData();
 
-        const channel = supabase
-            .channel('queue_changes')
-            .on('postgres_changes', 
-                { event: '*', schema: 'public', table: 'tokens', filter: `shop_id=eq.${currentShopId}` }, 
-                () => fetchInitialData()
-            )
-            .subscribe();
+        const activeShopId = urlShopId || currentShopId;
+        if (activeShopId) {
+            const channel = supabase
+                .channel('queue_changes')
+                .on('postgres_changes', 
+                    { event: '*', schema: 'public', table: 'tokens', filter: `shop_id=eq.${activeShopId}` }, 
+                    () => fetchInitialData()
+                )
+                .subscribe();
 
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [user, currentShopId]);
+            return () => {
+                supabase.removeChannel(channel);
+            };
+        }
+    }, [user, currentShopId, searchParams]);
 
     const nowServing = activeTokens.filter(t => t.status === 'called').map(t => t.token_number);
 
@@ -287,220 +307,331 @@ const Queue = () => {
         }
     };
 
-    // UI Styles
+    // UI Styles (Light Mode Premium)
     const S = {
         container: {
             minHeight: '100vh',
-            background: 'var(--background)',
-            color: 'var(--text-main)',
-            paddingBottom: '100px'
+            background: '#FFFFFF',
+            color: '#000000',
+            paddingTop: '80px',
+            marginTop: '0px',
+            paddingBottom: '120px'
         },
         hero: {
-            height: '25vh',
+            height: '180px',
             width: '100%',
             position: 'relative',
-            background: `linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(15,15,20,1)), url(${shop.image_url || '/assets/salman.jpeg'})`,
+            backgroundImage: `url(${shop.image_url || '/assets/salman.jpeg'})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
+            borderRadius: '24px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'flex-end',
-            padding: '0 5% 20px 5%'
+            padding: '16px 24px',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
+            marginBottom: '32px'
         },
         badge: {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '4px',
-            padding: '3px 10px',
-            background: 'rgba(255,255,255,0.1)',
-            backdropFilter: 'blur(10px)',
-            borderRadius: '50px',
+            padding: '5px 10px',
+            background: '#FFFFFF',
+            borderRadius: '10px',
             fontSize: '0.65rem',
-            fontWeight: '600',
-            color: 'white',
+            fontWeight: '900',
+            color: '#000',
             marginBottom: '8px',
-            border: '1px solid rgba(255,255,255,0.1)'
+            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+            width: 'fit-content'
         },
         title: {
-            fontSize: '1.6rem',
-            fontWeight: '800',
-            color: 'white',
+            fontSize: '1.25rem',
+            fontWeight: '950',
+            color: '#000',
             margin: '0 0 6px 0',
-            textShadow: '0 2px 10px rgba(0,0,0,0.3)'
+            letterSpacing: '-0.5px',
+            lineHeight: 1
         },
         infoRow: {
             display: 'flex',
             gap: '12px',
             flexWrap: 'wrap',
-            marginTop: '10px'
+            marginTop: '4px'
         },
         infoItem: {
             display: 'flex',
             alignItems: 'center',
-            gap: '5px',
-            color: 'rgba(255,255,255,0.6)',
-            fontSize: '0.75rem'
+            gap: '4px',
+            color: 'rgba(0,0,0,0.5)',
+            fontSize: '0.75rem',
+            fontWeight: '800'
         },
         section: {
-            padding: '20px 5%',
+            padding: '20px 0',
             maxWidth: '1200px',
             margin: '0 auto'
         },
         card: {
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: '16px',
-            padding: '16px',
-            backdropFilter: 'blur(20px)'
+            background: '#FFFFFF',
+            border: '1px solid #F5F5F5',
+            borderRadius: '24px',
+            padding: '20px',
+            boxShadow: '0 8px 30px rgba(0,0,0,0.02)',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
         },
         featureTag: {
-            padding: '10px 16px',
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.1)',
+            padding: '8px 16px',
+            background: '#F8F8F8',
+            border: '1px solid #F0F0F0',
             borderRadius: '12px',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            fontSize: '0.8rem',
-            fontWeight: '500',
-            color: 'var(--text-muted)'
+            fontSize: '0.75rem',
+            fontWeight: '800',
+            color: '#000'
         },
         grid: {
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-            gap: '12px',
-            marginTop: '15px'
+            gap: '16px',
+            marginTop: '12px'
         },
         staffItem: {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '10px 12px',
-            background: 'rgba(255,255,255,0.03)',
+            padding: '10px 14px',
+            background: '#F8F8F8',
             borderRadius: '12px',
             cursor: 'pointer',
-            border: '1px solid rgba(255,255,255,0.05)',
-            transition: 'all 0.2s',
+            border: '1px solid #F0F0F0',
+            transition: 'all 0.3s ease',
             marginBottom: '8px'
         }
     };
 
     // Dynamic features and gallery
-    const facilities = (shop.features && shop.features.length > 0) 
-        ? shop.features 
+    const facilities = (shop.amenities && shop.amenities.length > 0) 
+        ? shop.amenities 
         : ['Premium Service', 'Professional Staff', 'Clean Environment'];
     const rating = shop.rating || 5.0;
     const gallery = (shop.gallery_urls && shop.gallery_urls.length > 0) 
         ? shop.gallery_urls 
         : ['/assets/salman.jpeg', '/assets/product.jpg', '/assets/hero-bg.jpg'];
+    const aboutText = shop.about_text || 'Experience the best grooming service in town. Our expert staff is here to make you look and feel your best.';
 
     return (
         <div style={S.container}>
-            {/* Hero Section */}
-            <div style={S.hero}>
+            <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 20px' }}>
+                {/* Minimal Amenities Grid at Top */}
                 <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
+                    style={{ marginBottom: '24px', marginTop: '12px' }}
                 >
-                    <div style={S.badge}>
-                        <span style={{ color: '#4ade80' }}>●</span> Open Now
-                    </div>
-                    <h1 style={S.title}>{shop.name}</h1>
-                    <div style={S.infoRow}>
-                        <div style={S.infoItem}>
-                            <span style={{ color: '#fbbf24' }}>★</span> {rating}
-                        </div>
-                        <div style={S.infoItem}>
-                            <span>📍</span> {shop.address || 'Location'}
-                        </div>
-                        {shop.distance !== undefined && shop.distance !== null && (
-                            <div style={{...S.infoItem, color: '#60a5fa', fontWeight: '700'}}>
-                                <span>🚀</span> {formatDistance(shop.distance)}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                        {facilities.slice(0, 4).map((f, i) => (
+                            <div key={i} style={{ 
+                                background: '#F9F9F9', 
+                                border: '1px solid #F0F0F0', 
+                                borderRadius: '14px', 
+                                padding: '8px 12px', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '8px',
+                            }}>
+                                <div style={{ 
+                                    width: '18px', 
+                                    height: '18px', 
+                                    borderRadius: '50%', 
+                                    background: '#000', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center',
+                                    flexShrink: 0
+                                }}>
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#FFF" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                </div>
+                                <span style={{ fontSize: '0.7rem', fontWeight: '900', color: '#000', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{f}</span>
                             </div>
-                        )}
-                        <div style={S.infoItem}>
-                            <span>⏰</span> 09:00 - 21:00
+                        ))}
+                    </div>
+                </motion.div>
+
+                {/* Hero Section (Light Mode) - Sleeker */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{ marginBottom: '32px' }}
+                >
+                    <div style={{ position: 'relative' }}>
+                        <div style={S.hero} />
+                        
+                        {/* Header Back Button - Integrated into Banner */}
+                        <motion.button 
+                            whileHover={{ scale: 1.05, background: '#1A56C5' }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => navigate('/saloons')}
+                            style={{ 
+                                position: 'absolute',
+                                top: '16px',
+                                left: '16px',
+                                background: '#276EF1', 
+                                border: 'none', 
+                                width: '38px', 
+                                height: '38px', 
+                                borderRadius: '12px', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center', 
+                                cursor: 'pointer',
+                                color: '#FFF',
+                                boxShadow: '0 4px 15px rgba(39, 110, 241, 0.3)',
+                                zIndex: 10
+                            }}
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
+                            </svg>
+                        </motion.button>
+
+                        {/* Overlay Content */}
+                        <div style={{ position: 'absolute', bottom: '24px', left: '24px', right: '24px' }}>
+                            <div style={S.badge}>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '2px' }}>
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                    <circle cx="12" cy="10" r="3" />
+                                </svg>
+                                {shop.address || 'Location'}
+                            </div>
+                            <h1 style={{ ...S.title, color: '#FFF', textShadow: '0 2px 15px rgba(0,0,0,0.4)' }}>{shop.name}</h1>
+                            <div style={S.infoRow}>
+                                <div style={{ ...S.infoItem, color: '#FFF', opacity: 0.9, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="#fbbf24">
+                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                    </svg>
+                                    {rating}
+                                </div>
+                                {shop.distance !== undefined && shop.distance !== null && (
+                                    <div style={{...S.infoItem, color: '#FFF', fontWeight: '900', background: 'rgba(0,0,0,0.2)', padding: '3px 10px', borderRadius: '8px', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem'}}>
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                            <circle cx="12" cy="12" r="10" />
+                                            <polyline points="12 6 12 12 16 14" />
+                                        </svg>
+                                        {formatDistance(shop.distance)}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </motion.div>
             </div>
 
             <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 5%' }}>
+
                 {/* 1. Live Queue Hub (Integrated Control Center) */}
                 <motion.div 
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
-                    style={{ marginTop: '30px', position: 'relative', zIndex: 10, width: '100%' }}
+                    style={{ position: 'relative', zIndex: 10, width: '100%' }}
                 >
-                    <div style={{ 
-                        ...S.card, 
-                        background: 'rgba(15, 15, 20, 0.98)', 
-                        border: '1px solid rgba(255,255,255,0.08)', 
-                        boxShadow: '0 30px 60px rgba(0,0,0,0.6)', 
-                        backdropFilter: 'blur(40px)',
-                        padding: '8px 12px',
-                        borderRadius: '16px'
-                    }}>
+                    <div style={S.card}>
                         {/* Status Header */}
                         <div style={{ 
                             display: 'flex', 
                             justifyContent: 'space-between', 
                             alignItems: 'center', 
-                            marginBottom: '12px',
-                            paddingBottom: '10px',
-                            borderBottom: '1px solid rgba(255,255,255,0.05)'
+                            marginBottom: '20px',
+                            paddingBottom: '16px',
+                            borderBottom: '1px solid #EEEEEE'
                         }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 10px #4ade80' }} />
-                                <span style={{ fontSize: '0.6rem', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', fontWeight: '900', letterSpacing: '1.5px' }}>Live Hub</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ 
+                                    background: '#F6F6F6', 
+                                    padding: '6px 12px', 
+                                    borderRadius: '10px', 
+                                    fontSize: '0.7rem', 
+                                    fontWeight: '900', 
+                                    color: '#276EF1',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                }}>
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                                    </svg>
+                                    Live
+                                </div>
+                                <div style={{ 
+                                    background: '#F6F6F6', 
+                                    padding: '6px 12px', 
+                                    borderRadius: '10px', 
+                                    fontSize: '0.7rem', 
+                                    fontWeight: '900', 
+                                    color: '#000',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                }}>
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" />
+                                    </svg>
+                                    Premium
+                                </div>
                             </div>
-                            <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', fontWeight: '600' }}>
+                            <div style={{ fontSize: '0.85rem', color: 'rgba(0,0,0,0.4)', fontWeight: '900' }}>
                                 {activeTokens.length} Active
                             </div>
                         </div>
 
                         {bookingStage === 'idle' && (
                             <div style={{ width: '100%' }}>
-                                {/* Active Ticket - Ultra Compact Pill */}
+                                {/* Active Ticket - Premium Pill */}
                                 {myActiveToken && (
                                     <motion.div 
                                         initial={{ scale: 0.98, opacity: 0 }}
                                         animate={{ scale: 1, opacity: 1 }}
                                         whileTap={{ scale: 0.99 }}
                                         style={{ 
-                                            background: 'linear-gradient(90deg, rgba(74, 222, 128, 0.15), rgba(34, 197, 94, 0.05))', 
-                                            border: '1px solid rgba(74, 222, 128, 0.2)',
-                                            borderRadius: '12px',
-                                            padding: '8px 12px',
-                                            marginBottom: '12px',
+                                            background: '#F6F6F6', 
+                                            border: '1px solid rgba(0,0,0,0.03)',
+                                            borderRadius: '24px',
+                                            padding: '16px 20px',
+                                            marginBottom: '24px',
                                             display: 'flex',
                                             justifyContent: 'space-between',
                                             alignItems: 'center',
-                                            cursor: 'pointer'
+                                            cursor: 'pointer',
+                                            boxShadow: '0 10px 20px rgba(0,0,0,0.02)'
                                         }}
                                         onClick={() => {
                                             setGeneratedToken(myActiveToken);
                                             setBookingStage('generated');
                                         }}
                                     >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', color: '#4ade80', fontWeight: '900', background: 'rgba(74, 222, 128, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>Active</div>
-                                            <div style={{ fontSize: '0.9rem', fontWeight: '900', color: 'white' }}>Q{myActiveToken.token_number}</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#FFF', fontWeight: '950', background: '#22C55E', padding: '4px 10px', borderRadius: '12px' }}>Active</div>
+                                            <div style={{ fontSize: '1.2rem', fontWeight: '950', color: '#000' }}>Q{myActiveToken.token_number}</div>
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', fontWeight: '600' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <span style={{ fontSize: '0.9rem', color: 'rgba(0,0,0,0.6)', fontWeight: '900' }}>
                                                 {myActiveToken.status === 'called' ? 'Serving' : `Pos: #${getPosition(myActiveToken) + 1}`}
                                             </span>
-                                            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem' }}>→</span>
+                                            <span style={{ color: '#000', fontSize: '1.2rem', fontWeight: '900' }}>→</span>
                                         </div>
                                     </motion.div>
                                 )}
 
                                 {/* Unified Staff Selection & Status Grid */}
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '8px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
                                     {/* Fastest Option */}
                                     <motion.div 
-                                        whileHover={{ background: 'rgba(99, 102, 241, 0.15)', borderColor: 'rgba(99, 102, 241, 0.3)' }}
+                                        whileHover={{ y: -5, boxShadow: '0 20px 40px rgba(0,0,0,0.06)' }}
                                         whileTap={{ scale: 0.98 }}
                                         onClick={() => {
                                             setSelectedStaffId(null);
@@ -508,23 +639,35 @@ const Queue = () => {
                                             else setBookingStage('details');
                                         }}
                                         style={{ 
-                                            padding: '10px', 
-                                            background: 'rgba(99, 102, 241, 0.08)', 
-                                            border: '1px solid rgba(99, 102, 241, 0.2)',
-                                            borderRadius: '14px',
+                                            padding: '16px', 
+                                            background: '#F6F6F6', 
+                                            border: '1px solid rgba(0,0,0,0.03)',
+                                            borderRadius: '24px',
                                             cursor: 'pointer',
                                             display: 'flex',
                                             flexDirection: 'column',
                                             justifyContent: 'center',
-                                            minHeight: '70px'
+                                            minHeight: '100px',
+                                            transition: 'all 0.3s ease'
                                         }}
                                     >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                            <div style={{ fontSize: '1rem' }}>⚡</div>
-                                            <div style={{ fontWeight: '800', fontSize: '0.8rem', color: 'white' }}>Fastest</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
+                                            <div style={{ fontWeight: '950', fontSize: '1rem', color: '#000' }}>Fastest</div>
                                         </div>
-                                        <div style={{ fontSize: '0.6rem', color: 'var(--primary)', fontWeight: '900', letterSpacing: '0.5px' }}>
-                                            {getStaffWait(null).mins}m WAIT
+                                        <div style={{ 
+                                            fontSize: '0.6rem', 
+                                            color: '#fbbf24', 
+                                            fontWeight: '900', 
+                                            textTransform: 'uppercase', 
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '2px'
+                                        }}>
+                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                            </svg>
+                                            Top Rated
                                         </div>
                                     </motion.div>
 
@@ -535,7 +678,7 @@ const Queue = () => {
                                         return (
                                             <motion.div 
                                                 key={s.id}
-                                                whileHover={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.15)' }}
+                                                whileHover={{ y: -5, boxShadow: '0 20px 40px rgba(0,0,0,0.06)' }}
                                                 whileTap={{ scale: 0.98 }}
                                                 onClick={() => {
                                                     setSelectedStaffId(s.id);
@@ -543,46 +686,54 @@ const Queue = () => {
                                                     else setBookingStage('details');
                                                 }}
                                                 style={{ 
-                                                    padding: '10px',
-                                                    background: 'rgba(255,255,255,0.02)',
-                                                    border: '1px solid rgba(255,255,255,0.05)',
-                                                    borderRadius: '14px',
+                                                    padding: '16px',
+                                                    background: '#FFFFFF',
+                                                    border: '1px solid rgba(0,0,0,0.03)',
+                                                    borderRadius: '24px',
                                                     cursor: 'pointer',
                                                     display: 'flex',
                                                     flexDirection: 'column',
-                                                    gap: '6px',
+                                                    gap: '10px',
                                                     position: 'relative',
-                                                    overflow: 'hidden'
+                                                    overflow: 'hidden',
+                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.02)',
+                                                    transition: 'all 0.3s ease'
                                                 }}
                                             >
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#22c55e', fontSize: '0.8rem', fontWeight: '800' }}>
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                                        <polyline points="20 6 9 17 4 12" />
+                                                    </svg>
+                                                    Verified
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                     <div style={{ 
-                                                        width: '28px', 
-                                                        height: '28px', 
-                                                        borderRadius: '8px', 
-                                                        background: `url(${s.image_url || '/assets/salman.jpeg'})`,
+                                                        width: '36px', 
+                                                        height: '36px', 
+                                                        borderRadius: '12px', 
+                                                        backgroundImage: `url(${s.image_url || '/assets/salman.jpeg'})`,
                                                         backgroundSize: 'cover',
                                                         backgroundPosition: 'center',
-                                                        border: `1.5px solid ${currentlyServing ? '#4ade80' : 'rgba(255,255,255,0.1)'}`
+                                                        border: `2px solid ${currentlyServing ? '#4ade80' : '#EEEEEE'}`
                                                     }} />
                                                     <div style={{ overflow: 'hidden' }}>
-                                                        <div style={{ fontWeight: '700', fontSize: '0.8rem', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</div>
-                                                        <div style={{ fontSize: '0.6rem', color: currentlyServing ? '#4ade80' : 'rgba(255,255,255,0.4)', fontWeight: '800' }}>
-                                                            {currentlyServing ? `Q${currentlyServing.token_number}` : 'FREE'}
+                                                        <div style={{ fontWeight: '950', fontSize: '0.9rem', color: '#000', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</div>
+                                                        <div style={{ fontSize: '0.65rem', color: currentlyServing ? '#4ade80' : 'rgba(0,0,0,0.4)', fontWeight: '900' }}>
+                                                            {currentlyServing ? `Q${currentlyServing.token_number}` : 'AVAILABLE'}
                                                         </div>
                                                     </div>
                                                 </div>
                                                 <div style={{ 
-                                                    fontSize: '0.55rem', 
-                                                    color: 'rgba(255,255,255,0.3)', 
-                                                    fontWeight: '700',
-                                                    borderTop: '1px solid rgba(255,255,255,0.03)',
-                                                    paddingTop: '5px',
+                                                    fontSize: '0.7rem', 
+                                                    color: 'rgba(0,0,0,0.3)', 
+                                                    fontWeight: '900',
+                                                    borderTop: '1px solid #EEEEEE',
+                                                    paddingTop: '8px',
                                                     display: 'flex',
                                                     justifyContent: 'space-between'
                                                 }}>
                                                     <span>WAIT</span>
-                                                    <span style={{ color: 'white' }}>{sWait.mins}m</span>
+                                                    <span style={{ color: '#000' }}>{sWait.mins}m</span>
                                                 </div>
                                             </motion.div>
                                         );
@@ -592,40 +743,42 @@ const Queue = () => {
                         )}
 
                         {bookingStage !== 'idle' && (
-                            <div style={{ maxWidth: '240px', margin: '0 auto', padding: '5px 0' }}>
+                            <div style={{ maxWidth: '320px', margin: '0 auto', padding: '10px 0' }}>
                                 {/* Booking Flow Content (Details, Services, Generated) */}
                                 {bookingStage === 'details' && (
                                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                                        <div style={{ marginBottom: '12px', textAlign: 'center' }}>
-                                            <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '800', marginBottom: '2px' }}>Booking with</div>
-                                            <div style={{ fontSize: '0.75rem', fontWeight: '900', color: 'white' }}>
+                                        <div style={{ marginBottom: '24px', textAlign: 'center' }}>
+                                            <div style={{ fontSize: '0.75rem', color: 'rgba(0,0,0,0.4)', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: '950', marginBottom: '4px' }}>Booking with</div>
+                                            <div style={{ fontSize: '1.2rem', fontWeight: '950', color: '#000' }}>
                                                 {selectedStaffId ? activeStaff.find(s => s.id === selectedStaffId)?.name : 'Fastest Barber'}
                                             </div>
-                                            <div style={{ fontSize: '0.6rem', color: 'var(--primary)', marginTop: '2px', fontWeight: '800' }}>Wait: {waitInfo.mins} mins</div>
+                                            <div style={{ fontSize: '0.85rem', color: '#276EF1', marginTop: '4px', fontWeight: '950' }}>Wait: {waitInfo.mins} mins</div>
                                         </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                             <div style={{ textAlign: 'left' }}>
-                                                <label style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', fontWeight: '800', marginLeft: '5px', marginBottom: '3px', display: 'block' }}>Your Full Name</label>
+                                                <label style={{ fontSize: '0.7rem', color: 'rgba(0,0,0,0.4)', textTransform: 'uppercase', fontWeight: '950', marginLeft: '8px', marginBottom: '6px', display: 'block', letterSpacing: '1px' }}>Full Name</label>
                                                 <input 
                                                     type="text" 
                                                     placeholder="e.g. John Doe" 
                                                     value={customerName}
                                                     onChange={e => setCustomerName(e.target.value)}
-                                                    style={{ width: '100%', padding: '6px 10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'white', fontSize: '0.75rem', outline: 'none' }}
+                                                    style={{ width: '100%', padding: '14px 20px', background: '#F6F6F6', border: '1px solid #EEEEEE', borderRadius: '16px', color: '#000', fontSize: '1rem', outline: 'none', fontWeight: '800' }}
                                                 />
                                             </div>
-                                            <button
+                                            <motion.button
+                                                whileHover={{ scale: 1.02 }}
+                                                whileTap={{ scale: 0.98 }}
                                                 onClick={() => setBookingStage('services')}
                                                 disabled={!customerName}
-                                                style={{ width: '100%', padding: '8px', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)', opacity: !customerName ? 0.5 : 1 }}
+                                                style={{ width: '100%', padding: '16px', background: '#000', color: 'white', border: 'none', borderRadius: '16px', fontWeight: '950', fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 20px rgba(0,0,0,0.1)', opacity: !customerName ? 0.5 : 1 }}
                                             >
-                                                Next: Select Services
-                                            </button>
+                                                Select Services
+                                            </motion.button>
                                             <button
                                                 onClick={() => setBookingStage('idle')}
-                                                style={{ width: '100%', padding: '4px', background: 'transparent', color: 'rgba(255,255,255,0.4)', border: 'none', fontSize: '0.6rem', cursor: 'pointer', fontWeight: '600' }}
+                                                style={{ width: '100%', padding: '8px', background: 'transparent', color: 'rgba(0,0,0,0.4)', border: 'none', fontSize: '0.85rem', cursor: 'pointer', fontWeight: '900' }}
                                             >
-                                                ← Cancel & Change
+                                                ← Change Barber
                                             </button>
                                         </div>
                                     </motion.div>
@@ -633,21 +786,21 @@ const Queue = () => {
 
                                 {bookingStage === 'services' && (
                                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                                        <div style={{ fontSize: '0.75rem', fontWeight: '900', marginBottom: '12px', color: 'white', textAlign: 'center' }}>Select Services</div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '6px', marginBottom: '12px' }}>
+                                        <div style={{ fontSize: '1.2rem', fontWeight: '950', marginBottom: '20px', color: '#000', textAlign: 'center' }}>Select Services</div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px', marginBottom: '24px' }}>
                                             {services.map(s => (
                                                 <motion.button 
                                                     key={s.id}
                                                     whileTap={{ scale: 0.98 }}
                                                     onClick={() => setSelectedServiceIds(prev => prev.includes(s.id) ? prev.filter(x => x !== s.id) : [...prev, s.id])}
                                                     style={{
-                                                        padding: '6px 10px',
-                                                        borderRadius: '10px',
+                                                        padding: '14px 20px',
+                                                        borderRadius: '16px',
                                                         border: '1px solid',
-                                                        borderColor: selectedServiceIds.includes(s.id) ? 'var(--primary)' : 'rgba(255,255,255,0.1)',
-                                                        background: selectedServiceIds.includes(s.id) ? 'rgba(99, 102, 241, 0.1)' : 'rgba(255,255,255,0.03)',
-                                                        color: 'white',
-                                                        fontSize: '0.65rem',
+                                                        borderColor: selectedServiceIds.includes(s.id) ? '#000' : '#EEEEEE',
+                                                        background: selectedServiceIds.includes(s.id) ? '#000' : '#F6F6F6',
+                                                        color: selectedServiceIds.includes(s.id) ? '#FFF' : '#000',
+                                                        fontSize: '0.9rem',
                                                         cursor: 'pointer',
                                                         transition: 'all 0.2s',
                                                         display: 'flex',
@@ -655,26 +808,28 @@ const Queue = () => {
                                                         alignItems: 'center'
                                                     }}
                                                 >
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', border: '1.2px solid', borderColor: selectedServiceIds.includes(s.id) ? 'var(--primary)' : 'rgba(255,255,255,0.2)', background: selectedServiceIds.includes(s.id) ? 'var(--primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                            {selectedServiceIds.includes(s.id) && <span style={{ color: 'white', fontSize: '0.5rem' }}>✓</span>}
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                        <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: '2px solid', borderColor: selectedServiceIds.includes(s.id) ? '#FFF' : '#000', background: selectedServiceIds.includes(s.id) ? '#FFF' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            {selectedServiceIds.includes(s.id) && <span style={{ color: '#000', fontSize: '0.7rem', fontWeight: '950' }}>✓</span>}
                                                         </div>
-                                                        <span style={{ fontWeight: '600' }}>{s.name}</span>
+                                                        <span style={{ fontWeight: '900' }}>{s.name}</span>
                                                     </div>
-                                                    <span style={{ fontWeight: '800', color: selectedServiceIds.includes(s.id) ? 'var(--primary)' : 'rgba(255,255,255,0.3)', fontSize: '0.6rem' }}>₹{s.price || '200'}</span>
+                                                    <span style={{ fontWeight: '950', opacity: selectedServiceIds.includes(s.id) ? 1 : 0.4 }}>₹{s.price || '200'}</span>
                                                 </motion.button>
                                             ))}
                                         </div>
-                                        <button
+                                        <motion.button
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
                                             onClick={generateToken}
                                             disabled={loading || selectedServiceIds.length === 0}
-                                            style={{ width: '100%', padding: '8px', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer', opacity: (loading || selectedServiceIds.length === 0) ? 0.6 : 1, boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)' }}
+                                            style={{ width: '100%', padding: '16px', background: '#276EF1', color: 'white', border: 'none', borderRadius: '16px', fontWeight: '950', fontSize: '1rem', cursor: 'pointer', opacity: (loading || selectedServiceIds.length === 0) ? 0.6 : 1, boxShadow: '0 10px 20px rgba(39, 110, 241, 0.2)' }}
                                         >
                                             {loading ? 'Processing...' : 'Complete Booking'}
-                                        </button>
+                                        </motion.button>
                                         <button
                                             onClick={() => setBookingStage('details')}
-                                            style={{ width: '100%', padding: '4px', background: 'transparent', color: 'rgba(255,255,255,0.4)', border: 'none', fontSize: '0.6rem', cursor: 'pointer', fontWeight: '600' }}
+                                            style={{ width: '100%', padding: '8px', background: 'transparent', color: 'rgba(0,0,0,0.4)', border: 'none', fontSize: '0.85rem', cursor: 'pointer', fontWeight: '900' }}
                                         >
                                             ← Go Back
                                         </button>
@@ -682,69 +837,74 @@ const Queue = () => {
                                 )}
 
                                 {bookingStage === 'generated' && generatedToken && (
-                                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ textAlign: 'center', padding: '5px 0' }}>
-                                        <div style={{ fontSize: '0.55rem', color: '#4ade80', fontWeight: '800', marginBottom: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                                            <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#4ade80' }} />
-                                            TrimTime Slot Reserved
+                                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ textAlign: 'center', padding: '10px 0' }}>
+                                        <div style={{ fontSize: '0.75rem', color: '#22C55E', fontWeight: '950', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22C55E' }} />
+                                            Slot Reserved
                                         </div>
                                         
-                                         <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', padding: '12px', marginBottom: '10px' }}>
-                                             <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: '800', marginBottom: '2px' }}>Your Ticket</div>
-                                             <div style={{ fontSize: '1.2rem', fontWeight: '950', color: 'white', lineHeight: 1, marginBottom: '8px' }}>Q{generatedToken.token_number}</div>
+                                         <div style={{ background: '#F6F6F6', borderRadius: '24px', border: '1px solid #EEEEEE', padding: '24px', marginBottom: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.02)' }}>
+                                             <div style={{ fontSize: '0.7rem', color: 'rgba(0,0,0,0.3)', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: '950', marginBottom: '8px' }}>Your Ticket</div>
+                                             <div style={{ fontSize: '3rem', fontWeight: '950', color: '#000', lineHeight: 1, marginBottom: '16px', letterSpacing: '-2px' }}>Q{generatedToken.token_number}</div>
                                              
                                              {generatedToken.preferred_staff_id && (
                                                  <div style={{ 
-                                                     marginBottom: '10px', 
-                                                     padding: '8px', 
-                                                     background: 'rgba(255,255,255,0.03)', 
-                                                     borderRadius: '8px',
+                                                     marginBottom: '20px', 
+                                                     padding: '16px', 
+                                                     background: '#FFFFFF', 
+                                                     borderRadius: '16px',
                                                      display: 'flex',
                                                      alignItems: 'center',
-                                                     gap: '8px',
-                                                     justifyContent: 'center'
+                                                     gap: '12px',
+                                                     justifyContent: 'center',
+                                                     border: '1px solid #EEEEEE'
                                                  }}>
                                                      <div style={{ 
-                                                         width: '24px', 
-                                                         height: '24px', 
+                                                         width: '40px', 
+                                                         height: '40px', 
                                                          borderRadius: '50%', 
-                                                         background: `url(${activeStaff.find(s => s.id === generatedToken.preferred_staff_id)?.image_url || '/assets/salman.jpeg'})`,
+                                                         backgroundImage: `url(${activeStaff.find(s => s.id === generatedToken.preferred_staff_id)?.image_url || '/assets/salman.jpeg'})`,
                                                          backgroundSize: 'cover',
-                                                         border: '1px solid rgba(255,255,255,0.1)'
+                                                         border: '2px solid #EEEEEE'
                                                      }} />
                                                      <div style={{ textAlign: 'left' }}>
-                                                         <div style={{ fontSize: '0.55rem', fontWeight: '800', color: 'white' }}>
+                                                         <div style={{ fontSize: '0.9rem', fontWeight: '950', color: '#000' }}>
                                                              {activeStaff.find(s => s.id === generatedToken.preferred_staff_id)?.name}
                                                          </div>
-                                                         <div style={{ fontSize: '0.45rem', color: getStaffWait(generatedToken.preferred_staff_id, generatedToken).isBusy ? '#fbbf24' : '#4ade80', fontWeight: '700' }}>
-                                                             {getStaffWait(generatedToken.preferred_staff_id, generatedToken).isBusy ? `Serving Q${getStaffWait(generatedToken.preferred_staff_id, generatedToken).servingToken}` : 'Available Now'}
+                                                         <div style={{ fontSize: '0.7rem', color: getStaffWait(generatedToken.preferred_staff_id, generatedToken).isBusy ? '#fbbf24' : '#22C55E', fontWeight: '900' }}>
+                                                             {getStaffWait(generatedToken.preferred_staff_id, generatedToken).isBusy ? `Serving Q${getStaffWait(generatedToken.preferred_staff_id, generatedToken).servingToken}` : 'Ready for you'}
                                                          </div>
                                                      </div>
                                                  </div>
                                              )}
 
-                                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                                                 <div style={{ fontSize: '0.45rem', color: 'rgba(255,255,255,0.4)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px' }}>Est. Arrival</div>
-                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', paddingTop: '16px', borderTop: '1px solid #EEEEEE' }}>
+                                                 <div style={{ fontSize: '0.7rem', color: 'rgba(0,0,0,0.3)', fontWeight: '950', textTransform: 'uppercase', letterSpacing: '1px' }}>Est. Wait Time</div>
+                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                      <CountdownTimer 
                                                          targetDate={new Date(Date.now() + getEstimatedWait(generatedToken).mins * 60000).toISOString()} 
                                                          size="sm" 
+                                                         color="#000"
+                                                         strokeColor="rgba(0,0,0,0.05)"
                                                      />
-                                                     <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#60a5fa' }}>{getEstimatedWait(generatedToken).mins}m</span>
+                                                     <span style={{ fontSize: '1.2rem', fontWeight: '950', color: '#276EF1' }}>{getEstimatedWait(generatedToken).mins}m</span>
                                                  </div>
                                              </div>
                                          </div>
 
-                                        <button 
+                                        <motion.button 
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
                                             onClick={() => {
                                                 setBookingStage('idle');
                                                 setSelectedServiceIds([]);
                                                 setSelectedStaffId(null);
                                                 navigate('/profile');
                                             }}
-                                            style={{ width: '100%', padding: '8px', background: 'var(--primary)', border: 'none', borderRadius: '10px', color: 'white', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)' }}
+                                            style={{ width: '100%', padding: '16px', background: '#000', border: 'none', borderRadius: '16px', color: 'white', fontWeight: '950', fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 20px rgba(0,0,0,0.1)' }}
                                         >
-                                            View My Tokens
-                                        </button>
+                                            Track in Profile
+                                        </motion.button>
                                     </motion.div>
                                 )}
                             </div>
@@ -753,69 +913,39 @@ const Queue = () => {
                 </motion.div>
 
                 {/* 2. Shop Details Sections */}
-                <div style={{ marginTop: '50px', display: 'flex', flexDirection: 'column', gap: '50px' }}>
-                    {/* Amenities Section */}
+                <div style={{ marginTop: '60px', display: 'flex', flexDirection: 'column', gap: '60px' }}>
+                    {/* About Section */}
                     <section>
-                        <div style={{ marginBottom: '20px', paddingLeft: '8px', borderLeft: '2px solid var(--primary)' }}>
-                            <h2 style={{ fontSize: '1.1rem', fontWeight: '900', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '1.5px', color: 'white' }}>Amenities</h2>
-                            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', fontWeight: '500' }}>Curated facilities for you.</p>
+                        <div style={{ marginBottom: '24px', borderLeft: '4px solid #000', paddingLeft: '16px' }}>
+                            <h2 style={{ fontSize: '1.5rem', fontWeight: '950', marginBottom: '4px', color: '#000', letterSpacing: '-0.5px' }}>About</h2>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
-                            {facilities.map((f, i) => (
-                                <motion.div 
-                                    key={i} 
-                                    whileHover={{ y: -3, background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}
-                                    style={{ 
-                                        background: 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)', 
-                                        border: '1px solid rgba(255,255,255,0.06)', 
-                                        borderRadius: '16px', 
-                                        padding: '12px 16px', 
-                                        display: 'flex', 
-                                        gap: '12px', 
-                                        alignItems: 'center',
-                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                                    }}
-                                >
-                                    <div style={{ 
-                                        width: '32px', 
-                                        height: '32px', 
-                                        borderRadius: '10px', 
-                                        background: 'rgba(99, 102, 241, 0.1)', 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
-                                        justifyContent: 'center', 
-                                        fontSize: '1rem',
-                                        border: '1px solid rgba(99, 102, 241, 0.2)'
-                                    }}>✨</div>
-                                    <div>
-                                        <div style={{ fontWeight: '800', fontSize: '0.85rem', color: 'white' }}>{f}</div>
-                                        <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '700' }}>Exclusive</div>
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
+                        <p style={{ color: 'rgba(0,0,0,0.6)', fontSize: '1rem', lineHeight: '1.8', fontWeight: '800' }}>
+                            {aboutText}
+                        </p>
                     </section>
 
+
                     {/* Gallery Section */}
-                    <section style={{ paddingBottom: '50px' }}>
-                        <div style={{ marginBottom: '20px', paddingLeft: '8px', borderLeft: '2px solid #f43f5e' }}>
-                            <h2 style={{ fontSize: '1.1rem', fontWeight: '900', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '1.5px', color: 'white' }}>The Space</h2>
-                            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', fontWeight: '500' }}>Our aesthetic workspace.</p>
+                    <section style={{ paddingBottom: '80px' }}>
+                        <div style={{ marginBottom: '24px', borderLeft: '4px solid #f43f5e', paddingLeft: '16px' }}>
+                            <h2 style={{ fontSize: '1.5rem', fontWeight: '950', marginBottom: '4px', color: '#000', letterSpacing: '-0.5px' }}>The Space</h2>
+                            <p style={{ color: 'rgba(0,0,0,0.4)', fontSize: '0.85rem', fontWeight: '900' }}>Our aesthetic workspace.</p>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
                             {gallery.map((url, i) => (
                                 <motion.div 
                                     key={i} 
-                                    whileHover={{ scale: 1.02, filter: 'brightness(1.1)' }}
+                                    whileHover={{ scale: 1.02, filter: 'brightness(1.05)' }}
                                     style={{ 
-                                        height: '160px', 
-                                        borderRadius: '16px', 
-                                        background: `url(${url})`,
+                                        height: '200px', 
+                                        borderRadius: '32px', 
+                                        backgroundImage: `url(${url})`,
                                         backgroundSize: 'cover',
                                         backgroundPosition: 'center',
-                                        border: '1px solid rgba(255,255,255,0.08)',
+                                        border: '1px solid #EEEEEE',
                                         cursor: 'zoom-in',
-                                        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+                                        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        boxShadow: '0 10px 30px rgba(0,0,0,0.05)'
                                     }}
                                 />
                             ))}
@@ -824,7 +954,7 @@ const Queue = () => {
                 </div>
             </div>
 
-            {/* Auth Modal Overlay */}
+            {/* Auth Modal Overlay (Light Mode) */}
             <AnimatePresence>
                 {showAuthModal && (
                     <motion.div 
@@ -832,39 +962,54 @@ const Queue = () => {
                         animate={{ opacity: 1 }} 
                         exit={{ opacity: 0 }}
                         onClick={() => setShowAuthModal(false)}
-                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(20px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     >
                         <motion.div 
                             initial={{ scale: 0.9, y: 20 }}
                             animate={{ scale: 1, y: 0 }}
                             onClick={(e) => e.stopPropagation()}
-                            style={{ position: 'relative', width: '90%', maxWidth: '400px', background: 'var(--background)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '24px', padding: '40px' }}
+                            style={{ 
+                                position: 'relative', 
+                                width: '90%', 
+                                maxWidth: '420px', 
+                                background: '#FFFFFF', 
+                                border: '1px solid #EEEEEE', 
+                                borderRadius: '40px', 
+                                padding: '50px 40px',
+                                boxShadow: '0 40px 100px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.02)'
+                            }}
                         >
                             <button 
                                 onClick={() => setShowAuthModal(false)}
                                 style={{ 
                                     position: 'absolute', 
-                                    top: '20px', 
-                                    right: '20px', 
-                                    background: 'rgba(255,255,255,0.05)', 
-                                    border: '1px solid rgba(255,255,255,0.1)', 
+                                    top: '30px', 
+                                    right: '30px', 
+                                    background: '#F6F6F6', 
+                                    border: '1px solid #EEEEEE', 
                                     borderRadius: '50%', 
-                                    width: '32px', 
-                                    height: '32px', 
+                                    width: '40px', 
+                                    height: '40px', 
                                     display: 'flex', 
                                     alignItems: 'center', 
                                     justifyContent: 'center', 
-                                    color: 'white', 
+                                    color: '#000', 
                                     cursor: 'pointer',
-                                    fontSize: '1.2rem',
+                                    fontSize: '1.5rem',
+                                    fontWeight: '300',
                                     transition: 'all 0.2s'
                                 }}
                             >
                                 ×
                             </button>
-                            <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '10px', textAlign: 'center' }}>{authMode === 'signup' ? 'Create Account' : 'Welcome Back'}</h2>
-                            <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '30px' }}>Join the queue instantly with your phone.</p>
-                                   <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <h2 style={{ fontSize: '2rem', fontWeight: '950', marginBottom: '8px', textAlign: 'center', color: '#000', letterSpacing: '-1px' }}>
+                                {authMode === 'signup' ? 'Create Account' : 'Welcome Back'}
+                            </h2>
+                            <p style={{ textAlign: 'center', color: 'rgba(0,0,0,0.4)', fontSize: '0.95rem', marginBottom: '40px', fontWeight: '900' }}>
+                                Join the queue instantly with your phone.
+                            </p>
+                            
+                            <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                 {authMode === 'signup' && (
                                     <div style={{ position: 'relative' }}>
                                         <input 
@@ -875,17 +1020,23 @@ const Queue = () => {
                                             required
                                             style={{ 
                                                 width: '100%', 
-                                                padding: '16px 16px 16px 45px', 
-                                                background: 'rgba(255,255,255,0.03)', 
-                                                border: '1px solid rgba(255,255,255,0.1)', 
-                                                borderRadius: '16px', 
-                                                color: 'white',
-                                                fontSize: '0.95rem',
+                                                padding: '18px 18px 18px 50px', 
+                                                background: '#F6F6F6', 
+                                                border: '1px solid #EEEEEE', 
+                                                borderRadius: '20px', 
+                                                color: '#000',
+                                                fontSize: '1rem',
                                                 outline: 'none',
+                                                fontWeight: '800',
                                                 transition: 'all 0.3s ease'
                                             }} 
                                         />
-                                        <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>👤</span>
+                                        <span style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }}>
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                                <circle cx="12" cy="7" r="4" />
+                                            </svg>
+                                        </span>
                                     </div>
                                 )}
                                 <div style={{ position: 'relative' }}>
@@ -897,16 +1048,22 @@ const Queue = () => {
                                         required
                                         style={{ 
                                             width: '100%', 
-                                            padding: '16px 16px 16px 45px', 
-                                            background: 'rgba(255,255,255,0.03)', 
-                                            border: '1px solid rgba(255,255,255,0.1)', 
-                                            borderRadius: '16px', 
-                                            color: 'white',
-                                            fontSize: '0.95rem',
-                                            outline: 'none'
+                                            padding: '18px 18px 18px 50px', 
+                                            background: '#F6F6F6', 
+                                            border: '1px solid #EEEEEE', 
+                                            borderRadius: '20px', 
+                                            color: '#000',
+                                            fontSize: '1rem',
+                                            outline: 'none',
+                                            fontWeight: '800'
                                         }} 
                                     />
-                                    <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>📱</span>
+                                    <span style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }}>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                                            <line x1="12" y1="18" x2="12.01" y2="18" />
+                                        </svg>
+                                    </span>
                                 </div>
                                 <div style={{ position: 'relative' }}>
                                     <input 
@@ -917,47 +1074,54 @@ const Queue = () => {
                                         required
                                         style={{ 
                                             width: '100%', 
-                                            padding: '16px 16px 16px 45px', 
-                                            background: 'rgba(255,255,255,0.03)', 
-                                            border: '1px solid rgba(255,255,255,0.1)', 
-                                            borderRadius: '16px', 
-                                            color: 'white',
-                                            fontSize: '0.95rem',
-                                            outline: 'none'
+                                            padding: '18px 18px 18px 50px', 
+                                            background: '#F6F6F6', 
+                                            border: '1px solid #EEEEEE', 
+                                            borderRadius: '20px', 
+                                            color: '#000',
+                                            fontSize: '1rem',
+                                            outline: 'none',
+                                            fontWeight: '800'
                                         }} 
                                     />
-                                    <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>🔒</span>
+                                    <span style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }}>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3m-3-3l-4-4" />
+                                        </svg>
+                                    </span>
                                 </div>
 
                                 {authError && (
-                                    <div style={{ color: '#ef4444', fontSize: '0.8rem', textAlign: 'center', background: 'rgba(239, 68, 68, 0.1)', padding: '8px', borderRadius: '8px', fontWeight: '600' }}>
+                                    <div style={{ color: '#ef4444', fontSize: '0.85rem', textAlign: 'center', background: 'rgba(239, 68, 68, 0.05)', padding: '12px', borderRadius: '12px', fontWeight: '900' }}>
                                         {authError}
                                     </div>
                                 )}
 
-                                <button 
+                                <motion.button 
                                     type="submit" 
                                     disabled={loading}
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
                                     style={{ 
                                         width: '100%', 
-                                        padding: '16px', 
-                                        background: 'linear-gradient(135deg, var(--primary), #4f46e5)', 
+                                        padding: '20px', 
+                                        background: '#000', 
                                         color: 'white', 
                                         border: 'none', 
-                                        borderRadius: '16px', 
-                                        fontWeight: '800', 
+                                        borderRadius: '20px', 
+                                        fontWeight: '950', 
                                         marginTop: '10px',
-                                        fontSize: '1rem',
+                                        fontSize: '1.1rem',
                                         cursor: loading ? 'not-allowed' : 'pointer',
-                                        boxShadow: '0 10px 20px rgba(99, 102, 241, 0.2)',
+                                        boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
                                         transition: 'all 0.3s ease'
                                     }}
                                 >
-                                    {loading ? 'Securing Session...' : (authMode === 'signup' ? 'Create Account' : 'Sign In')}
-                                </button>
+                                    {loading ? 'Processing...' : (authMode === 'signup' ? 'Create Account' : 'Sign In')}
+                                </motion.button>
                             </form>
-                            <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '0.9rem' }}>
-                                <button onClick={() => setAuthMode(authMode === 'signup' ? 'login' : 'signup')} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: '600', cursor: 'pointer' }}>
+                            <div style={{ textAlign: 'center', marginTop: '30px' }}>
+                                <button onClick={() => setAuthMode(authMode === 'signup' ? 'login' : 'signup')} style={{ background: 'none', border: 'none', color: '#276EF1', fontWeight: '950', cursor: 'pointer', fontSize: '0.95rem' }}>
                                     {authMode === 'signup' ? 'Already have an account? Login' : 'New here? Create account'}
                                 </button>
                             </div>

@@ -1314,7 +1314,6 @@ const Home = () => {
                         {filteredProducts.slice(0, 12).map((product, i) => (
                             <motion.div
                                 key={product.id || `product-${i}`}
-                                key={product.id || `product-${i}`}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => setSelectedProduct(product)}
                                 style={{

@@ -18,7 +18,7 @@ const NAV_ITEMS = [
 ];
 
 const S = {
-    shell: { display: 'flex', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: '#f7f7fb' },
+    shell: { display: 'flex', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: 'var(--background)' },
     sidebar: (isOpen) => ({
         width: '220px', backgroundColor: '#1a1a2e', color: '#ccc', padding: '24px 0',
         display: 'flex', flexDirection: 'column', flexShrink: 0,
@@ -37,8 +37,8 @@ const S = {
     }),
     sidebarFooter: { marginTop: 'auto', padding: '16px 22px' },
     logoutBtn: {
-        width: '100%', padding: '10px 0', backgroundColor: '#000000', color: '#ffffff',
-        border: 'none', borderRadius: '7px', cursor: 'pointer', fontSize: '13px', fontWeight: 600,
+        width: '100%', padding: '10px 0', backgroundColor: 'var(--surface)', color: 'var(--text-main)',
+        border: '1px solid var(--border)', borderRadius: '7px', cursor: 'pointer', fontSize: '13px', fontWeight: 600,
     },
     content: { flex: 1, overflow: 'auto', minWidth: 0 },
     topBar: {
@@ -47,8 +47,8 @@ const S = {
         boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
         position: 'sticky', top: 0, zIndex: 900,
     },
-    topBarTitle: { fontSize: '16px', fontWeight: 600, color: '#000000', margin: 0, display: 'flex', alignItems: 'center', gap: '12px' },
-    topBarUser: { fontSize: '13px', color: '#000000' },
+    topBarTitle: { fontSize: '16px', fontWeight: 600, color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '12px' },
+    topBarUser: { fontSize: '13px', color: 'var(--text-main)' },
     hamburger: {
         background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', padding: '4px',
         display: 'none', // Hidden on desktop
@@ -79,7 +79,7 @@ const AdminDashboard = () => {
                         box-shadow: 10px 0 20px rgba(0,0,0,0.2);
                     }
                     .admin-hamburger {
-                        display: block !important;
+                        display: flex !important;
                     }
                     .admin-topbar {
                         padding: 14px 16px !important;
@@ -103,8 +103,14 @@ const AdminDashboard = () => {
 
             {/* ── Sidebar ── */}
             <aside className={`admin-sidebar ${isSidebarOpen ? 'open' : ''}`} style={S.sidebar(isSidebarOpen)}>
+                <div style={{ padding: '0 20px', marginBottom: '12px', marginTop: '12px' }}>
+                    <button style={S.logoutBtn} onClick={logout}>
+                        ⬅ Logout
+                    </button>
+                </div>
+
                 <div style={S.sidebarBrand}>
-                    🛎️ TrimTime Admin
+                    🛎️ TrimTimes Admin
                     <span style={S.sidebarBrandSub}>Super Admin Panel</span>
                 </div>
 
@@ -123,34 +129,40 @@ const AdminDashboard = () => {
                     ))}
                 </nav>
 
-                <div style={S.sidebarFooter}>
-                    <button style={S.logoutBtn} onClick={logout}>
-                        ⬅ Logout
-                    </button>
-                </div>
+                {/* Removed Footer Logout */}
             </aside>
 
             {/* ── Main content ── */}
             <main style={S.content}>
-                <header style={S.topBar} className="admin-topbar">
-                    <div style={S.topBarTitle}>
-                        <button 
-                            className="admin-hamburger" 
-                            style={S.hamburger} 
-                            onClick={toggleSidebar}
-                        >
-                            ☰
-                        </button>
-                        {NAV_ITEMS.find(n => n.id === activeTab)?.label ?? 'Dashboard'}
-                    </div>
-                    <span style={S.topBarUser} className="admin-user-email">
-                        Logged in as: {user?.email}
-                    </span>
-                </header>
+                {/* Mobile Hamburger Button (Floating since TopBar is removed) */}
+                <button 
+                    className="admin-hamburger" 
+                    style={{
+                        position: 'fixed',
+                        top: '16px',
+                        left: '16px',
+                        zIndex: 900,
+                        width: '44px',
+                        height: '44px',
+                        borderRadius: '12px',
+                        background: '#1a1a2e',
+                        color: '#fff',
+                        border: 'none',
+                        fontSize: '24px',
+                        display: 'none', // Controlled by CSS media query
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        cursor: 'pointer'
+                    }}
+                    onClick={toggleSidebar}
+                >
+                    ☰
+                </button>
 
                 <div style={{ position: 'relative' }}>
                     {ActiveComponent ? <ActiveComponent /> : (
-                        <div style={{ padding: '40px', color: '#000000', textAlign: 'center' }}>
+                        <div style={{ padding: '40px', color: 'var(--text-muted)', textAlign: 'center' }}>
                             🚧 This section is coming soon.
                         </div>
                     )}

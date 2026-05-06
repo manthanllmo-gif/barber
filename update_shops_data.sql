@@ -4,13 +4,16 @@ ALTER TABLE shops ADD COLUMN IF NOT EXISTS longitude FLOAT8;
 
 -- Update Shop Names and Coordinates using specific IDs
 UPDATE shops SET 
-    name = 'K11 Family Saloon', 
-    latitude = 23.18640491212713, 
-    longitude = 77.42672681784147 
-WHERE id = '036937cd-51de-4ec2-93a2-df045b0ac9b0';
+    name = 'K11 Family Salon', 
+    city = 'Mumbai',
+    address = '123 Marine Drive, Mumbai',
+    image_url = 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800&q=80',
+    description = 'Premium grooming for the modern family.'
+WHERE name = 'K11 Family Salon';
 
 UPDATE shops SET 
-    name = 'Blade Menz Saloon', 
+    name = 'Blade Menz Salon', 
+    city = 'Delhi',
     latitude = 23.192716606258806, 
     longitude = 77.4331641195496 
 WHERE id = '00000000-0000-0000-0000-000000000000';

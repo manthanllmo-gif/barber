@@ -6,14 +6,17 @@
   --primary: #276EF1;
   --primary-hover: #1e56c4;
   --primary-glow: rgba(39, 110, 241, 0.15);
+  --primary-rgb: 39, 110, 241;
   --secondary: #666666;
   --accent: #FF2D55;
   --accent-hover: #e6294d;
   --success: #05A357;
   --warning: #FFC043;
   --danger: #EE4035;
+  
   --background: #FFFFFF;
   --surface: #F9F9F9;
+  --surface-elevated: #FFFFFF;
   --text-main: #000000;
   --text-muted: #666666;
   --border: rgba(0, 0, 0, 0.08);
@@ -21,6 +24,14 @@
   --glass-bg: rgba(255, 255, 255, 0.85);
   --glass-border: rgba(0, 0, 0, 0.06);
   --glass-glow: rgba(39, 110, 241, 0.04);
+  
+  --nav-bg: rgba(255, 255, 255, 0.8);
+  --nav-text: #000000;
+  --nav-border: rgba(0, 0, 0, 0.06);
+  
+  --card-bg: #FFFFFF;
+  --card-border: rgba(0, 0, 0, 0.06);
+  
   --premium-gradient: linear-gradient(135deg, #276EF1 0%, #0052D4 100%);
   --success-gradient: linear-gradient(135deg, #05A357 0%, #048a4a 100%);
 
@@ -46,10 +57,63 @@
   color-scheme: light;
 }
 
+.dark {
+  --background: #000000;
+  --surface: #0A0A0A;
+  --surface-elevated: #111111;
+  --text-main: #FFFFFF;
+  --text-muted: #A0A0A0;
+  --border: rgba(255, 255, 255, 0.1);
+  
+  --glass-bg: rgba(0, 0, 0, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-glow: rgba(39, 110, 241, 0.08);
+  
+  --nav-bg: rgba(0, 0, 0, 0.7);
+  --nav-text: #FFFFFF;
+  --nav-border: rgba(255, 255, 255, 0.08);
+  
+  --card-bg: #0A0A0A;
+  --card-border: rgba(255, 255, 255, 0.08);
+  
+  --shadow-premium: 0 10px 40px rgba(0, 0, 0, 0.6);
+  
+  color-scheme: dark;
+}
+
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  position: relative;
+  overscroll-behavior-x: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* Global utility to prevent sideways sway */
+.app-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  position: relative;
 }
 
 body {
@@ -57,10 +121,12 @@ body {
   min-height: 100vh;
   background-color: var(--background);
   background-image: 
-    radial-gradient(circle at 0% 0%, rgba(39, 110, 241, 0.03) 0%, transparent 30%),
-    radial-gradient(circle at 100% 100%, rgba(39, 110, 241, 0.03) 0%, transparent 30%),
-    radial-gradient(circle at 50% 50%, #FFFFFF 0%, #FDFDFD 100%);
+    radial-gradient(circle at 0% 0%, rgba(39, 110, 241, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 100% 100%, rgba(39, 110, 241, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, var(--background) 0%, var(--surface) 100%);
   background-attachment: fixed;
+  color: var(--text-main);
+  transition: background-color 0.4s ease, color 0.4s ease;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -81,9 +147,9 @@ button:active {
 
 /* Glassmorphism Utilities */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-premium);
@@ -107,10 +173,10 @@ button:active {
 }
 
 .premium-card:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(99, 102, 241, 0.4);
-  transform: translateY(-4px) scale(1.01);
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.7);
+  background: var(--surface);
+  border-color: var(--primary);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-premium);
 }
 
 /* Buttons */
@@ -188,6 +254,21 @@ button:active {
 }
 
 /* Dashboard Specifics */
+body {
+  background-color: var(--background);
+  color: var(--text-main);
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-main);
+  transition: color 0.4s ease;
+}
+
+button, a {
+  transition: all 0.3s ease;
+}
+
 .dashboard-container {
   min-height: 100vh;
 }
@@ -235,13 +316,13 @@ button:active {
 /* Owner Sidebar Layout */
 .dashboard-container.owner-layout {
   display: flex;
-  background: #FFFFFF;
+  background: var(--background);
 }
 
 .dashboard-sidebar {
   width: 280px;
-  background: #FFFFFF;
-  border-right: 1px solid #EEEEEE;
+  background: var(--background);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -291,13 +372,13 @@ button:active {
 .brand-logo {
   width: 44px;
   height: 44px;
-  background: #000000;
+  background: var(--text-main);
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  color: #FFFFFF;
+  color: var(--background);
 }
 
 .sidebar-nav {
@@ -326,13 +407,13 @@ button:active {
 }
 
 .sidebar-btn:hover {
-  background: #F6F6F6;
-  color: #000000;
+  background: var(--surface);
+  color: var(--text-main);
 }
 
 .sidebar-btn.active {
-  background: #000000;
-  color: #FFFFFF;
+  background: var(--text-main);
+  color: var(--background);
 }
 
 .sidebar-btn.active .btn-icon {
@@ -356,7 +437,7 @@ button:active {
   max-width: 1400px;
   padding: 40px 60px;
   margin: 0;
-  background: #FFFFFF;
+  background: var(--background);
 }
 
 .mobile-dashboard-header {
@@ -364,8 +445,8 @@ button:active {
   align-items: center;
   justify-content: space-between;
   padding: 12px 20px;
-  background: #FFFFFF;
-  border-bottom: 1px solid #EEEEEE;
+  background: var(--background);
+  border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 900;
@@ -380,11 +461,11 @@ button:active {
   height: 44px;
   font-size: 32px;
   display: flex;
-  alignItems: center;
-  justifyContent: center;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   padding: 0;
-  color: #000;
+  color: var(--text-main);
   line-height: 1;
 }
 
@@ -614,17 +695,17 @@ button:active {
 }
 
 .modal-content {
-  background: #FFFFFF;
-  border: 1px solid #EEEEEE;
+  background: var(--background);
+  border: 1px solid var(--border);
   border-radius: 32px;
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
   padding: 32px;
-  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-premium);
   position: relative;
   overflow-y: auto;
-  color: #000000;
+  color: var(--text-main);
 }
 
 .modal-content::before {
@@ -639,8 +720,8 @@ button:active {
 }
 
 .receipt-bg {
-  background: #F9F9F9;
-  border: 1px solid #EEEEEE;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 24px;
   position: relative;
 }
@@ -659,22 +740,22 @@ button:active {
   height: 56px;
   min-width: 56px;
   font-size: 20px;
-  background: #F0F0F0;
+  background: var(--surface);
   border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: #000;
+  color: var(--text-main);
 }
 
 /* Forms Premium */
 .form-input {
-  background: #FFFFFF;
-  border: 1px solid #DDDDDD;
+  background: var(--background);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 14px 20px;
-  color: #000000;
+  color: var(--text-main);
   width: 100%;
   font-size: 15px;
   transition: all 0.2s;
@@ -682,18 +763,18 @@ button:active {
 
 .form-input:focus {
   outline: none;
-  border-color: #000000;
-  background: #FFFFFF;
-  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.05);
+  border-color: var(--primary);
+  background: var(--background);
+  box-shadow: 0 0 0 4px var(--primary-glow);
 }
 
 .form-input::placeholder {
-  color: #999999;
+  color: var(--text-muted);
 }
 
 select.form-input option {
-  background-color: #FFFFFF;
-  color: #000000;
+  background-color: var(--background);
+  color: var(--text-main);
 }
 
 /* Status Badges */
@@ -995,4 +1076,10 @@ select.form-input option {
   .receipt-bg {
     padding: 16px !important;
   }
+}
+
+/* Search Results Hover Effect */
+.search-result-item:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  transform: translateX(4px);
 }

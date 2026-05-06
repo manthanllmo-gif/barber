@@ -48,6 +48,12 @@ const CircleIcon = () => (
 const Home = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
+    
+    useEffect(() => {
+        document.title = "Home | TrimTimes";
+    }, []);
+
+    const [activePolicy, setActivePolicy] = useState(null);
     const { 
         shops, 
         products, 
@@ -76,15 +82,15 @@ const Home = () => {
     const banners = useMemo(() => {
         const serviceConfigs = {
             'Haircut': { color: '#FFC043', image: '/assets/image1.webp', title: 'Professional\nHAIRCUT' },
-            'Beard': { color: '#276EF1', image: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&q=80', title: 'Precision\nBEARD TRIM' },
-            'Facial': { color: '#05A357', image: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&q=80', title: 'Refreshing\nFACIAL' },
-            'Color': { color: '#EE4035', image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&q=80', title: 'Premium\nHAIR COLOR' },
-            'Shave': { color: '#FFC043', image: 'https://images.unsplash.com/photo-1621605815841-28d6444e7bf1?auto=format&fit=crop&q=80', title: 'Classic\nSHAVE' },
-            'Massage': { color: '#276EF1', image: 'https://images.unsplash.com/photo-1544161515-4ae6ce6e8450?auto=format&fit=crop&q=80', title: 'Relaxing\nMASSAGE' }
+            'Beard': { color: '#276EF1', image: '/assets/image4.jpg', title: 'Precision\nBEARD TRIM' },
+            'Facial': { color: '#05A357', image: '/assets/sparkle.jpeg', title: 'Refreshing\nFACIAL' },
+            'Color': { color: '#EE4035', image: '/assets/image2.webp', title: 'Premium\nHAIR COLOR' },
+            'Shave': { color: '#FFC043', image: '/assets/image4.jpg', title: 'Classic\nSHAVE' },
+            'Massage': { color: '#276EF1', image: '/assets/sparkle.jpeg', title: 'Relaxing\nMASSAGE' }
         };
 
-        // Take top 5 services from system
-        const source = serviceTypes.length > 0 ? serviceTypes : availableServices;
+        // Take top 5 services from system - aligning with "Explore Services" section
+        const source = availableServices;
         return source.slice(0, 5).map((service, index) => {
             const name = typeof service === 'string' ? service : (service?.name || 'Service');
             
@@ -92,7 +98,7 @@ const Home = () => {
                 name.toLowerCase().includes(key.toLowerCase())
             )?.[1] || { 
                 color: '#000', 
-                image: typeof service === 'object' && service.image_url ? service.image_url : 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&q=80',
+                image: typeof service === 'object' && service.image_url ? service.image_url : '/assets/image1.webp',
                 title: name.toUpperCase().split(' ').join('\n')
             };
 
@@ -101,8 +107,9 @@ const Home = () => {
                 title: config.title,
                 subtitle: 'SYSTEM FAVORITE',
                 image: config.image,
-                link: `/saloons?service=${encodeURIComponent(name)}`,
-                color: config.color
+                link: `/salons?service=${encodeURIComponent(name)}`,
+                color: config.color,
+                serviceName: name
             };
         });
     }, [availableServices, serviceTypes]);
@@ -140,6 +147,8 @@ const Home = () => {
 
     // Load persisted token on mount
     useEffect(() => {
+        if (!user) return; // Don't load if not logged in
+        
         const persisted = localStorage.getItem('trimtime_active_token');
         if (persisted) {
             try {
@@ -158,7 +167,7 @@ const Home = () => {
                 localStorage.removeItem('trimtime_active_token');
             }
         }
-    }, []);
+    }, [user]);
 
     // Update persistence whenever state changes
     useEffect(() => {
@@ -168,8 +177,11 @@ const Home = () => {
                 wait: waitMins,
                 target: targetDate
             }));
+        } else if (!user) {
+            // Only clear if user is also null to avoid flickering during refresh
+            localStorage.removeItem('trimtime_active_token');
         }
-    }, [activeToken, targetDate, waitMins]);
+    }, [activeToken, targetDate, waitMins, user]);
 
     useEffect(() => {
         if (user) {
@@ -184,6 +196,11 @@ const Home = () => {
                 .subscribe();
 
             return () => supabase.removeChannel(channel);
+        } else {
+            // Clear token state when user logs out
+            setActiveToken(null);
+            setWaitMins(0);
+            setTargetDate(null);
         }
     }, [user, shops]);
 
@@ -339,11 +356,14 @@ const Home = () => {
     }
 
     return (
-        <div className="home-container" style={{ 
-            background: 'linear-gradient(180deg, #FFFFFF 0%, #F9F9F9 100%)', 
+        <div className="home-container app-container" style={{ 
+            background: 'var(--background)', 
             minHeight: '100vh', 
-            color: '#000000', 
-            fontFamily: 'Inter, sans-serif' 
+            width: '100%',
+            overflowX: 'hidden',
+            color: 'var(--text-main)', 
+            fontFamily: 'Inter, sans-serif',
+            transition: 'all 0.4s ease'
         }}>
             <style>{`
                 @media (max-width: 768px) {
@@ -351,7 +371,8 @@ const Home = () => {
                         display: grid !important;
                         grid-template-columns: repeat(4, 1fr) !important;
                         gap: 12px !important;
-                        overflow-x: visible !important;
+                        overflow-x: hidden !important;
+                        width: 100% !important;
                         padding-bottom: 0 !important;
                     }
                     .grid-card {
@@ -386,16 +407,15 @@ const Home = () => {
                         text-transform: uppercase !important;
                         line-height: 1.1 !important;
                     }
-                    }
                     .service-arrow { display: none !important; }
                 }
             `}</style>
             <main style={{ padding: '100px 5% 24px' }}>
                 <header style={{ marginBottom: '40px' }}>
-                    <h1 style={{ fontSize: '1.8rem', fontWeight: '900', marginBottom: '4px', letterSpacing: '-0.5px', color: '#000000' }}>
+                    <h1 style={{ fontSize: '1.8rem', fontWeight: '900', marginBottom: '4px', letterSpacing: '-0.5px', color: 'var(--text-main)' }}>
                         Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {user?.user_metadata?.name?.split(' ')[0] || user?.user_metadata?.full_name?.split(' ')[0] || 'Guest'}
                     </h1>
-                    <p style={{ color: '#000000', fontSize: '1rem', fontWeight: '500', opacity: 0.7 }}>Where would you like to get your trim today?</p>
+                    <p style={{ color: 'var(--text-main)', fontSize: '1rem', fontWeight: '500', opacity: 0.7 }}>Where would you like to get your trim today?</p>
                 </header>
 
                 {/* Promotional Carousel Banner */}
@@ -474,7 +494,7 @@ const Home = () => {
                                                 boxShadow: '0 4px 15px rgba(255,255,255,0.2)'
                                             }}
                                         >
-                                            Get this service
+                                            Get {banners[currentBanner].serviceName}
                                         </button>
                                     </div>
                                 </motion.div>
@@ -495,7 +515,7 @@ const Home = () => {
                                         width: i === currentBanner ? '24px' : '8px',
                                         height: '8px',
                                         borderRadius: '4px',
-                                        background: i === currentBanner ? '#000' : '#DDD',
+                                        background: i === currentBanner ? 'var(--text-main)' : 'var(--border)',
                                         transition: 'all 0.3s ease',
                                         cursor: 'pointer'
                                     }}
@@ -506,7 +526,7 @@ const Home = () => {
                 )}
 
                 <AnimatePresence>
-                    {activeToken && (
+                    {user && activeToken && (
                         <motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -569,7 +589,7 @@ const Home = () => {
                     <motion.div 
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => navigate('/saloons')}
+                        onClick={() => navigate('/salons')}
                         style={{
                             position: 'relative',
                             height: '100px',
@@ -582,7 +602,7 @@ const Home = () => {
                         }}
                     >
                         <img 
-                            src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&q=80&w=1000" 
+                            src="/assets/sparkle.jpeg" 
                             alt=""
                             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }}
                         />
@@ -617,7 +637,7 @@ const Home = () => {
                         }}
                     >
                         <img 
-                            src="https://images.unsplash.com/photo-1512690196252-75ca49372cc6?auto=format&fit=crop&q=80&w=1000" 
+                            src="/assets/image1.webp" 
                             alt=""
                             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }}
                         />
@@ -640,8 +660,8 @@ const Home = () => {
                 {/* Features / What we do - Auto Scrolling Split Banner */}
                 <section style={{ marginBottom: '56px' }}>
                     <div style={{ marginBottom: '24px' }}>
-                        <h2 style={{ fontSize: '1.5rem', fontWeight: '950', color: '#000' }}>What we do</h2>
-                        <p style={{ color: '#666', fontSize: '0.9rem', fontWeight: '500' }}>Your grooming, digitally reimagined</p>
+                        <h2 style={{ fontSize: '1.5rem', fontWeight: '950', color: 'var(--text-main)' }}>What we do</h2>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>Your grooming, digitally reimagined</p>
                     </div>
 
                     <div style={{
@@ -657,23 +677,23 @@ const Home = () => {
                             {
                                 title: "Digital Queue",
                                 desc: "Join any queue from home. No physical waiting, just seamless entry.",
-                                image: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&q=80&w=1200",
+                                image: "/assets/image4.jpg",
                                 accent: "#FF4B6E",
-                                link: "/saloons"
+                                link: "/salons"
                             },
                             {
                                 title: "Live Tracking",
                                 desc: "Real-time position updates. Know exactly when it's your turn for a cut.",
-                                image: "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&q=80&w=1200",
+                                image: "/assets/image2.webp",
                                 accent: "#276EF1",
-                                link: "/saloons"
+                                link: "/salons"
                             },
                             {
                                 title: "Smart Discovery",
                                 desc: "Find elite shops nearby. Discover specialists based on your style.",
-                                image: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&q=80&w=1200",
+                                image: "/assets/sparkle.jpeg",
                                 accent: "#05A357",
-                                link: "/saloons"
+                                link: "/salons"
                             }
                         ].map((item, i) => i === currentFeature && (
                             <motion.div
@@ -725,7 +745,7 @@ const Home = () => {
                                             {item.desc}
                                         </p>
                                         <div style={{ marginTop: '24px', color: '#FFF', fontSize: '0.8rem', fontWeight: '900', letterSpacing: '1px', opacity: 0.9 }}>
-                                            EXPLORE NOW ➜
+                                            SALONS NOW ➜
                                         </div>
                                     </div>
 
@@ -748,21 +768,21 @@ const Home = () => {
                     </section>
 
 
-                {/* Top Saloons Section */}
+                {/* Top Salons Section */}
                 <section id="shops" style={{ marginBottom: '48px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                        <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#000000' }}>
-                            Top Saloons Nearby
+                        <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-main)' }}>
+                            Top Salons Nearby
                         </h2>
                         <div style={{ display: 'flex', gap: '12px' }}>
                             <button 
-                                onClick={() => navigate('/saloons')}
+                                onClick={() => navigate('/salons')}
                                 style={{ color: '#276EF1', background: 'none', border: 'none', fontWeight: '700', cursor: 'pointer', fontSize: '0.9rem' }}>
                                 View all
                             </button>
                             <button 
                                 onClick={getLocation}
-                                style={{ color: '#000', opacity: 0.6, background: 'none', border: 'none', fontWeight: '700', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                style={{ color: 'var(--text-main)', opacity: 0.6, background: 'none', border: 'none', fontWeight: '700', cursor: 'pointer', fontSize: '0.9rem' }}>
                                 {geoLoading ? 'Finding...' : 'Update Location 📍'}
                             </button>
                         </div>
@@ -783,32 +803,32 @@ const Home = () => {
                                     flexShrink: 0,
                                     borderRadius: '20px',
                                     overflow: 'hidden',
-                                    background: '#FFFFFF',
-                                    boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+                                    background: 'var(--surface)',
+                                    boxShadow: 'var(--shadow-premium)',
                                     cursor: 'pointer',
-                                    border: '1px solid rgba(0,0,0,0.03)'
+                                    border: '1px solid var(--border)'
                                 }}
                             >
-                                <div style={{ aspectRatio: '1/1', background: '#EEE', position: 'relative', overflow: 'hidden' }}>
+                                <div style={{ aspectRatio: '1/1', background: 'var(--border)', position: 'relative', overflow: 'hidden' }}>
                                     <img 
                                         src={shop.image_url || `/assets/${['salman.jpeg', 'sparkle.jpeg', 'sunny.jpg'][i % 3]}`} 
                                         alt={shop.name}
                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                     />
                                     {shop.distance && (
-                                        <div style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(255,255,255,0.9)', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '800' }}>
+                                        <div style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(0,0,0,0.8)', color: '#FFF', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '800' }}>
                                             {formatDistance(shop.distance)}
                                         </div>
                                     )}
                                 </div>
                                 <div style={{ padding: '16px' }}>
-                                    <div style={{ fontWeight: '800', fontSize: '1.1rem', marginBottom: '4px' }}>{shop.name}</div>
-                                    <div style={{ color: '#545454', fontSize: '0.85rem', marginBottom: '12px' }}>{shop.address || 'Premium Grooming Studio'}</div>
+                                    <div style={{ fontWeight: '800', fontSize: '1.1rem', marginBottom: '4px', color: 'var(--text-main)' }}>{shop.name}</div>
+                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '12px' }}>{shop.address || 'Premium Grooming Studio'}</div>
                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                        <div style={{ background: '#F3F3F3', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '700' }}>
+                                        <div style={{ background: 'var(--background)', color: 'var(--text-main)', border: '1px solid var(--border)', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '700' }}>
                                             {queueData[shop.id] || 0} in queue
                                         </div>
-                                        <div style={{ background: '#E7F0FE', color: '#276EF1', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '700' }}>
+                                        <div style={{ background: 'var(--primary-glow)', color: 'var(--primary)', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '700' }}>
                                             {(queueData[shop.id] || 0) * AVG_TIME_MINS}m wait
                                         </div>
                                     </div>
@@ -821,8 +841,8 @@ const Home = () => {
                 {/* Brand Mission Section - Auto Scrolling Banner */}
                 <section style={{ marginBottom: '56px' }}>
                     <div style={{ marginBottom: '24px' }}>
-                        <h2 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#000' }}>Our Vision</h2>
-                        <p style={{ color: '#666', fontSize: '0.9rem', fontWeight: '500' }}>What we are building together</p>
+                        <h2 style={{ fontSize: '1.5rem', fontWeight: '900', color: 'var(--text-main)' }}>Our Vision</h2>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>What we are building together</p>
                     </div>
 
                     <div style={{
@@ -830,31 +850,32 @@ const Home = () => {
                         height: '320px',
                         borderRadius: '32px',
                         overflow: 'hidden',
-                        background: '#000',
-                        boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
+                        background: 'var(--surface)',
+                        boxShadow: 'var(--shadow-premium)',
+                        border: '1px solid var(--border)'
                     }}>
                         <AnimatePresence mode="wait">
                             {[
                                 {
                                     title: "Zero Wait Culture",
                                     statement: "Redefining grooming by valuing your time. No physical queues, just seamless digital entry.",
-                                    image: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&q=80&w=1200",
+                                    image: "/assets/image4.jpg",
                                     icon: "⏳",
-                                    link: "/saloons",
+                                    link: "/salons",
                                     label: "EXPLORE SERVICES"
                                 },
                                 {
                                     title: "Master Craftsmanship",
                                     statement: "Connecting you with elite specialists who treat every cut as a masterpiece.",
-                                    image: "https://images.unsplash.com/photo-1599351474290-288d8481d863?auto=format&fit=crop&q=80&w=1200",
+                                    image: "/assets/image2.webp",
                                     icon: "✂️",
-                                    link: "/saloons",
+                                    link: "/salons",
                                     label: "FIND BARBERS"
                                 },
                                 {
                                     title: "Style Innovation",
                                     statement: "Leveraging technology to make premium grooming accessible. The future is here.",
-                                    image: "https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&q=80&w=1200",
+                                    image: "/assets/sparkle.jpeg",
                                     icon: "⚡",
                                     link: "/shop",
                                     label: "SHOP PRODUCTS"
@@ -952,22 +973,22 @@ const Home = () => {
                 <section style={{ marginBottom: '56px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                         <div>
-                            <h2 style={{ fontSize: '1.6rem', fontWeight: '900', color: '#000000', marginBottom: '4px' }}>Explore Services</h2>
-                            <p style={{ color: '#666', fontSize: '0.85rem', fontWeight: '500' }}>Curated grooming experiences for you</p>
+                            <h2 style={{ fontSize: '1.6rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '4px' }}>Explore Services</h2>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '500' }}>Curated grooming experiences for you</p>
                         </div>
                         <motion.button 
-                            whileHover={{ scale: 1.05 }}
+                            whileHover={{ scale: 1.05, background: 'var(--surface-elevated)' }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => setIsServicesExpanded(!isServicesExpanded)}
                             style={{ 
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '8px',
-                                background: '#f5f5f5',
-                                border: 'none',
+                                background: 'var(--surface)',
+                                border: '1px solid var(--border)',
                                 padding: '10px 20px',
                                 borderRadius: '12px',
-                                color: '#000',
+                                color: 'var(--text-main)',
                                 fontWeight: '700', 
                                 cursor: 'pointer',
                                 fontSize: '0.9rem'
@@ -1003,7 +1024,7 @@ const Home = () => {
                                         key={serviceId || serviceName || `service-${i}`}
                                         whileHover={{ y: -5, background: 'linear-gradient(145deg, #2A2A2A 0%, #1A1A1A 100%)' }}
                                         whileTap={{ scale: 0.98 }}
-                                        onClick={() => navigate(`/saloons?service=${encodeURIComponent(serviceName)}`)}
+                                        onClick={() => navigate(`/salons?service=${encodeURIComponent(serviceName)}`)}
                                         className="grid-card uber-style-card"
                                         style={{
                                             width: '100%',
@@ -1060,19 +1081,19 @@ const Home = () => {
                 <section style={{ marginBottom: '48px' }}>
                     <div style={{
                         position: 'relative',
-                        background: '#FFFFFF',
+                        background: 'var(--surface)',
                         borderRadius: '24px',
-                        border: '1px solid #EEEEEE',
+                        border: '1px solid var(--border)',
                         overflow: 'hidden',
                         display: 'flex',
                         alignItems: 'center',
                         minHeight: '200px',
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.02)'
+                        boxShadow: 'var(--shadow-premium)'
                     }}>
                         <div style={{ flex: 1, padding: '40px', zIndex: 2 }}>
-                            <div style={{ color: '#276EF1', fontWeight: '800', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '12px' }}>Our Promise</div>
-                            <h2 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#000', marginBottom: '8px' }}>Your Time. Your Style. No Waiting.</h2>
-                            <p style={{ color: '#545454', fontSize: '1rem', maxWidth: '400px', fontWeight: '500' }}>TrimTime connects you with the best grooming professionals, ensuring you never waste a minute in a queue again.</p>
+                            <div style={{ color: 'var(--primary)', fontWeight: '800', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '12px' }}>Our Promise</div>
+                            <h2 style={{ fontSize: '1.5rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '8px' }}>Your Time. Your Style. No Waiting.</h2>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '1rem', maxWidth: '400px', fontWeight: '500' }}>TrimTime connects you with the best grooming professionals, ensuring you never waste a minute in a queue again.</p>
                         </div>
                         <div style={{ width: '40%', height: '100%', position: 'absolute', right: 0, top: 0 }}>
                             <img 
@@ -1089,22 +1110,22 @@ const Home = () => {
                     <section style={{ marginBottom: '56px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                             <div>
-                                <h2 style={{ fontSize: '1.6rem', fontWeight: '900', color: '#000000', marginBottom: '4px' }}>Explore Categories</h2>
-                                <p style={{ color: '#666', fontSize: '0.85rem', fontWeight: '500' }}>Premium products for your routine</p>
+                                <h2 style={{ fontSize: '1.6rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '4px' }}>Explore Categories</h2>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '500' }}>Premium products for your routine</p>
                             </div>
                             <motion.button 
-                                whileHover={{ scale: 1.05 }}
+                                whileHover={{ scale: 1.05, background: 'var(--surface-elevated)' }}
                                 whileTap={{ scale: 0.95 }}
                                 onClick={() => setIsCategoriesExpanded(!isCategoriesExpanded)}
                                 style={{ 
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '8px',
-                                    background: '#f5f5f5',
-                                    border: 'none',
+                                    background: 'var(--surface)',
+                                    border: '1px solid var(--border)',
                                     padding: '10px 20px',
                                     borderRadius: '12px',
-                                    color: '#000',
+                                    color: 'var(--text-main)',
                                     fontWeight: '700', 
                                     cursor: 'pointer',
                                     fontSize: '0.9rem'
@@ -1133,6 +1154,13 @@ const Home = () => {
                                 const catName = typeof cat === 'string' ? cat : cat.name;
                                 const catId = typeof cat === 'string' ? cat : cat.id;
                                 const catImg = typeof cat === 'object' ? cat.image_url : null;
+                                
+                                // Map broken Unsplash URLs to local assets for standard categories
+                                let displayImg = catImg;
+                                if (catName === 'Hair Care') displayImg = '/assets/hair gel.webp';
+                                if (catName === 'Beard Care') displayImg = '/assets/image4.jpg';
+                                if (catName === 'Styling') displayImg = '/assets/image1.webp';
+                                if (catName === 'Tools') displayImg = '/assets/roller comb.jpg';
 
                                 return (
                                     <motion.div
@@ -1146,9 +1174,9 @@ const Home = () => {
                                             width: '100%',
                                             aspectRatio: '1/1',
                                             borderRadius: '28px',
-                                            background: catImg 
-                                                ? `linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.7)), url(${catImg})` 
-                                                : 'linear-gradient(145deg, #888888 0%, #111111 60%, #000000 100%)',
+                                            background: displayImg 
+                                                ? `linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.7)), url("${displayImg}")` 
+                                                : 'var(--premium-gradient)',
                                             backgroundSize: 'cover',
                                             backgroundPosition: 'center',
                                             display: 'flex',
@@ -1175,8 +1203,8 @@ const Home = () => {
                                             justifyContent: 'center',
                                             marginBottom: '16px'
                                         }}>
-                                            {catImg ? (
-                                                <img src={catImg} alt="" style={{ width: '20px', height: '20px', objectFit: 'contain', opacity: 0.8 }} />
+                                            {displayImg ? (
+                                                <img src={displayImg} alt="" style={{ width: '20px', height: '20px', objectFit: 'contain', opacity: 0.8 }} />
                                             ) : (
                                                 <CircleIcon />
                                             )}
@@ -1209,8 +1237,8 @@ const Home = () => {
                     <section style={{ marginBottom: '56px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                             <div>
-                                <h2 style={{ fontSize: '1.6rem', fontWeight: '900', color: '#000', marginBottom: '4px' }}>Trending Specialists</h2>
-                                <p style={{ color: '#666', fontSize: '0.9rem', fontWeight: '500' }}>Most requested stylists this week</p>
+                                <h2 style={{ fontSize: '1.6rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '4px' }}>Trending Specialists</h2>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>Most requested stylists this week</p>
                             </div>
                             <button 
                                 onClick={() => navigate('/barbers')}
@@ -1233,6 +1261,7 @@ const Home = () => {
                                     whileHover={{ y: -10 }}
                                     onClick={() => navigate(`/barbers/${barber.id}`)}
                                     style={{
+                                        width: '240px',
                                         minWidth: '240px',
                                         height: '320px',
                                         borderRadius: '24px',
@@ -1291,8 +1320,8 @@ const Home = () => {
                 <section id="products" style={{ marginBottom: '56px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                         <div>
-                            <h2 style={{ fontSize: '1.6rem', fontWeight: '900', color: '#000', marginBottom: '4px' }}>Shop Products</h2>
-                            <p style={{ color: '#666', fontSize: '0.9rem', fontWeight: '500' }}>Premium grooming essentials delivered</p>
+                            <h2 style={{ fontSize: '1.6rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '4px' }}>Shop Products</h2>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>Premium grooming essentials delivered</p>
                         </div>
                         <button 
                             onClick={() => navigate('/shop')}
@@ -1319,9 +1348,9 @@ const Home = () => {
                                 style={{
                                     width: '180px',
                                     borderRadius: '24px',
-                                    background: '#FFFFFF',
-                                    border: '1px solid #F0F0F0',
-                                    boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
+                                    background: 'var(--card-bg)',
+                                    border: '1px solid var(--border)',
+                                    boxShadow: 'var(--shadow-premium)',
                                     cursor: 'pointer',
                                     flexShrink: 0,
                                     display: 'flex',
@@ -1333,7 +1362,7 @@ const Home = () => {
                                     aspectRatio: '1/1', 
                                     borderRadius: '16px', 
                                     overflow: 'hidden', 
-                                    background: '#F9F9F9',
+                                    background: 'var(--surface)',
                                     marginBottom: '12px'
                                 }}>
                                     <img 
@@ -1343,11 +1372,11 @@ const Home = () => {
                                     />
                                 </div>
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                                    <div style={{ fontWeight: '700', fontSize: '0.95rem', color: '#000', marginBottom: '8px', lineHeight: '1.2' }}>
+                                    <div style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--text-main)', marginBottom: '8px', lineHeight: '1.2' }}>
                                         {product.name}
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div style={{ fontWeight: '900', fontSize: '1.1rem', color: '#000' }}>₹{product.price}</div>
+                                        <div style={{ fontWeight: '900', fontSize: '1.1rem', color: 'var(--text-main)' }}>₹{product.price}</div>
                                         <motion.button 
                                             whileTap={{ scale: 0.9 }}
                                             onClick={(e) => { e.stopPropagation(); addToCart(product); }}
@@ -1454,7 +1483,7 @@ const Home = () => {
                                 <motion.button
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
-                                    onClick={() => window.open(`https://wa.me/919981284141?text=${encodeURIComponent("Hello! I'm interested in onboarding my shop with TrimTime. Please provide more details.")}`, '_blank')}
+                                    onClick={() => window.open(`https://wa.me/919981284141?text=${encodeURIComponent("Hello! I'm interested in onboarding my shop with TrimTimes. Please provide more details.")}`, '_blank')}
                                     style={{
                                         background: '#FFFFFF',
                                         color: '#276EF1',
@@ -1626,17 +1655,6 @@ const Home = () => {
                 </AnimatePresence>
             </main>
 
-            {/* Simple Footer */}
-            <footer style={{ padding: '48px 5%', borderTop: '1px solid #EEEEEE', marginTop: '48px', color: '#545454', fontSize: '0.85rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
-                    <div style={{ fontWeight: '900', color: '#000000' }}>TRIMTIME.</div>
-                    <div style={{ display: 'flex', gap: '24px' }}>
-                        <span>© 2026 TrimTime</span>
-                        <span>Privacy</span>
-                        <span>Terms</span>
-                    </div>
-                </div>
-            </footer>
         </div>
     );
 };

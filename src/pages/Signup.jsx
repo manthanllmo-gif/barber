@@ -87,7 +87,7 @@ const Signup = () => {
                 </button>
 
                 <h1 style={{ textAlign: 'center', marginBottom: '8px', color: 'white', fontSize: '1.8rem', fontWeight: '800' }}>Create Account</h1>
-                <p style={{ textAlign: 'center', marginBottom: '32px', color: 'rgba(255,255,255,0.5)', fontSize: '0.95rem' }}>Join the TrimTime community</p>
+                <p style={{ textAlign: 'center', marginBottom: '32px', color: 'rgba(255,255,255,0.5)', fontSize: '0.95rem' }}>Join the TrimTimes community</p>
 
                 {error && (
                     <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '12px', borderRadius: '12px', marginBottom: '20px', fontSize: '14px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>

@@ -34,8 +34,8 @@ const BarberProfile = () => {
 
     if (loading) {
         return (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#050505', color: '#fff' }}>
-                <div style={{ width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--background)', color: 'var(--text-main)' }}>
+                <div style={{ width: '40px', height: '40px', border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
         );
@@ -43,9 +43,9 @@ const BarberProfile = () => {
 
     if (!barber) {
         return (
-            <div style={{ padding: '100px 20px', textAlign: 'center', color: '#fff' }}>
+            <div style={{ padding: '100px 20px', textAlign: 'center', color: 'var(--text-main)', background: 'var(--background)', minHeight: '100vh' }}>
                 <h2>Specialist not found</h2>
-                <button onClick={() => navigate(-1)} style={{ marginTop: '20px', padding: '10px 20px', background: '#fff', color: '#000', borderRadius: '8px', border: 'none', fontWeight: 'bold' }}>Go Back</button>
+                <button onClick={() => navigate(-1)} style={{ marginTop: '20px', padding: '10px 20px', background: 'var(--text-main)', color: 'var(--background)', borderRadius: '8px', border: 'none', fontWeight: 'bold' }}>Go Back</button>
             </div>
         );
     }
@@ -59,11 +59,11 @@ const BarberProfile = () => {
 
     const S = {
         container: {
-            background: '#FFFFFF',
+            background: 'var(--background)',
             minHeight: '100vh',
-            color: '#000000',
-            fontFamily: '"Inter", sans-serif',
-            paddingBottom: '120px' // Increased space for floating button
+            color: 'var(--text-main)',
+            fontFamily: 'var(--font-main)',
+            paddingBottom: '120px'
         },
         header: {
             position: 'relative',
@@ -71,7 +71,7 @@ const BarberProfile = () => {
             margin: '12px',
             borderRadius: '32px',
             overflow: 'hidden',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.05)'
+            boxShadow: 'var(--shadow-premium)'
         },
         headerImg: {
             width: '100%',
@@ -81,7 +81,7 @@ const BarberProfile = () => {
         headerGradient: {
             position: 'absolute',
             inset: 0,
-            background: 'linear-gradient(to top, rgba(255,255,255,0.95) 0%, transparent 40%)'
+            background: 'linear-gradient(to top, var(--background) 0%, transparent 40%)'
         },
         backBtn: {
             position: 'absolute',
@@ -90,12 +90,12 @@ const BarberProfile = () => {
             width: '40px',
             height: '40px',
             borderRadius: '12px',
-            background: '#FFFFFF',
+            background: 'var(--background)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#000',
-            border: '1px solid #EEE',
+            color: 'var(--text-main)',
+            border: '1px solid var(--border)',
             cursor: 'pointer',
             zIndex: 10,
             boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
@@ -111,12 +111,12 @@ const BarberProfile = () => {
             fontWeight: '950',
             margin: '0 0 4px 0',
             letterSpacing: '-1.2px',
-            color: '#000',
+            color: 'var(--text-main)',
             lineHeight: 1
         },
         subtitle: {
             fontSize: '0.85rem',
-            color: '#666',
+            color: 'var(--text-muted)',
             fontWeight: '700',
             margin: 0,
             display: 'flex',
@@ -130,7 +130,7 @@ const BarberProfile = () => {
             gap: '24px',
             marginTop: '32px',
             paddingBottom: '24px',
-            borderBottom: '1px solid #F0F0F0'
+            borderBottom: '1px solid var(--border)'
         },
         statItem: {
             display: 'flex',
@@ -139,14 +139,14 @@ const BarberProfile = () => {
         statValue: {
             fontSize: '1.4rem',
             fontWeight: '950',
-            color: '#000',
+            color: 'var(--text-main)',
             display: 'flex',
             alignItems: 'center',
             gap: '5px'
         },
         statLabel: {
             fontSize: '0.65rem',
-            color: '#AAA',
+            color: 'var(--text-muted)',
             textTransform: 'uppercase',
             letterSpacing: '1.5px',
             fontWeight: '900',
@@ -161,7 +161,7 @@ const BarberProfile = () => {
             marginBottom: '20px',
             textTransform: 'uppercase',
             letterSpacing: '2px',
-            color: '#AAA'
+            color: 'var(--text-muted)'
         },
         pillContainer: {
             display: 'flex',
@@ -170,12 +170,12 @@ const BarberProfile = () => {
         },
         pill: {
             padding: '10px 18px',
-            background: '#FFFFFF',
-            border: '1px solid #F0F0F0',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
             borderRadius: '12px',
             fontSize: '0.8rem',
             fontWeight: '800',
-            color: '#000',
+            color: 'var(--text-main)',
             boxShadow: '0 2px 6px rgba(0,0,0,0.01)'
         },
         list: {
@@ -191,21 +191,21 @@ const BarberProfile = () => {
             alignItems: 'center',
             gap: '16px',
             padding: '20px',
-            background: '#FFFFFF',
+            background: 'var(--surface)',
             borderRadius: '20px',
-            border: '1px solid #F0F0F0',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.01)'
+            border: '1px solid var(--border)',
+            boxShadow: 'var(--shadow-premium)'
         },
         listIcon: {
             width: '44px',
             height: '44px',
             borderRadius: '12px',
-            background: '#F8F8F8',
+            background: 'var(--surface)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '1.2rem',
-            border: '1px solid #EEE'
+            border: '1px solid var(--border)'
         },
         floatingBtnContainer: {
             position: 'fixed',
@@ -218,27 +218,27 @@ const BarberProfile = () => {
         bookBtn: {
             width: '100%',
             padding: '20px',
-            background: '#000000',
-            color: '#FFFFFF',
+            background: 'var(--text-main)',
+            color: 'var(--background)',
             border: 'none',
             borderRadius: '20px',
             fontSize: '1rem',
             fontWeight: '900',
             cursor: 'pointer',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+            boxShadow: 'var(--shadow-premium)',
             textTransform: 'uppercase',
             letterSpacing: '1px'
         }
     };
 
-    const imageUrl = barber.image_url || 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=800&q=80';
+    const imageUrl = barber.image_url || '/assets/image2.webp';
     const rating = barber.rating || 5.0;
     const experience = barber.experience_years || 0;
     const skills = barber.skills || [];
     const certificates = barber.certificates || [];
     const certificateUrls = barber.certificate_urls || [];
     const galleryUrls = barber.gallery_urls || [];
-    const pastSaloons = barber.past_saloons || [];
+    const pastSalons = barber.past_salons || [];
     const shopName = barber.shops?.name || 'Independent';
 
     return (
@@ -334,14 +334,14 @@ const BarberProfile = () => {
                 )}
 
                 {/* Past Experience */}
-                {pastSaloons.length > 0 && (
+                {pastSalons.length > 0 && (
                     <motion.div style={S.section} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}>
                         <h3 style={S.sectionTitle}>Previous Experience</h3>
                         <ul style={S.list}>
-                            {pastSaloons.map((saloon, i) => (
+                            {pastSalons.map((salon, i) => (
                                 <li key={i} style={S.listItem}>
                                     <div style={S.listIcon}>✂️</div>
-                                    <span style={{ fontWeight: '600' }}>{saloon}</span>
+                                    <span style={{ fontWeight: '600' }}>{salon}</span>
                                 </li>
                             ))}
                         </ul>

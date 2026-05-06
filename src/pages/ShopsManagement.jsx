@@ -2,92 +2,95 @@ import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { fetchCompletedTokenCount, fetchAllProducts, deleteProduct, fetchStaff } from '../lib/api';
+import { uploadImage } from '../lib/upload';
 
 /* ─────────────────────────────────────────────────────────────
    STYLES
 ───────────────────────────────────────────────────────────── */
 const S = {
-    page: { padding: '28px', maxWidth: '1000px', margin: '0 auto', fontFamily: 'Inter, system-ui, sans-serif' },
+    page: { padding: '28px', maxWidth: '1000px', margin: '0 auto', fontFamily: 'Inter, system-ui, sans-serif', background: 'var(--background)', minHeight: '100vh', transition: 'all 0.4s ease' },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
-    title: { margin: 0, fontSize: '24px', fontWeight: 700, color: '#1a1a2e' },
+    title: { margin: 0, fontSize: '24px', fontWeight: 700, color: 'var(--text-main)' },
     addBtn: {
         padding: '10px 20px', backgroundColor: '#673ab7', color: '#fff', border: 'none',
         borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '14px',
     },
     editBtn: {
-        padding: '5px 8px', backgroundColor: '#fff', color: '#673ab7', border: '1px solid #673ab7',
+        padding: '5px 8px', backgroundColor: 'transparent', color: '#673ab7', border: '1px solid #673ab7',
         borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '11px',
     },
     deleteBtn: {
-        padding: '5px 8px', backgroundColor: '#fff', color: '#d32f2f', border: '1px solid #d32f2f',
+        padding: '5px 8px', backgroundColor: 'transparent', color: '#d32f2f', border: '1px solid #d32f2f',
         borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '11px',
         marginLeft: '4px',
     },
     hideBtn: (active) => ({
-        padding: '5px 8px', backgroundColor: active ? '#fff' : '#f5f5f5',
-        color: active ? '#2e7d32' : '#000000',
-        border: active ? '1px solid #2e7d32' : '1px solid #000000',
+        padding: '5px 8px', backgroundColor: active ? 'transparent' : 'var(--surface)',
+        color: active ? '#2e7d32' : 'var(--text-main)',
+        border: active ? '1px solid #2e7d32' : '1px solid var(--border)',
         borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '11px',
         marginLeft: '4px',
     }),
     statusBadge: (active) => ({
         padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 700,
-        backgroundColor: active ? '#e8f5e9' : '#eee',
-        color: active ? '#1b5e20' : '#000000',
+        backgroundColor: active ? 'rgba(5, 163, 87, 0.1)' : 'var(--surface)',
+        color: active ? 'var(--success)' : 'var(--text-muted)',
         textTransform: 'uppercase',
         marginLeft: '8px',
-        verticalAlign: 'middle'
+        verticalAlign: 'middle',
+        border: `1px solid ${active ? 'rgba(5, 163, 87, 0.2)' : 'var(--border)'}`
     }),
     // ── Table
-    table: { width: '100%', borderCollapse: 'collapse', backgroundColor: '#fff', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' },
-    th: { textAlign: 'left', padding: '10px 12px', backgroundColor: '#f4f4f8', fontSize: '11px', fontWeight: 700, color: '#000000', borderBottom: '1px solid #eee', textTransform: 'uppercase', letterSpacing: '.4px' },
-    td: { padding: '10px 12px', fontSize: '13px', borderBottom: '1px solid #f0f0f0', verticalAlign: 'middle', color: '#000000' },
-    tdMuted: { padding: '10px 12px', fontSize: '13px', borderBottom: '1px solid #f0f0f0', verticalAlign: 'middle', color: '#000000' },
+    table: { width: '100%', borderCollapse: 'collapse', backgroundColor: 'var(--card-bg)', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', border: '1px solid var(--border)' },
+    th: { textAlign: 'left', padding: '10px 12px', backgroundColor: 'var(--surface)', fontSize: '11px', fontWeight: 700, color: 'var(--text-main)', borderBottom: '1px solid var(--border)', textTransform: 'uppercase', letterSpacing: '.4px' },
+    td: { padding: '10px 12px', fontSize: '13px', borderBottom: '1px solid var(--border)', verticalAlign: 'middle', color: 'var(--text-main)' },
+    tdMuted: { padding: '10px 12px', fontSize: '13px', borderBottom: '1px solid var(--border)', verticalAlign: 'middle', color: 'var(--text-muted)' },
     clickRow: (expanded) => ({
         cursor: 'pointer',
-        backgroundColor: expanded ? '#f8f5ff' : 'transparent',
+        backgroundColor: expanded ? 'var(--surface)' : 'transparent',
         transition: 'background .15s',
     }),
     badge: (status) => ({
         padding: '3px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 600,
-        backgroundColor: status === 'active' ? '#e8f5e9' : '#fce4ec',
-        color: status === 'active' ? '#2e7d32' : '#c62828',
+        backgroundColor: status === 'active' ? 'rgba(5, 163, 87, 0.1)' : 'rgba(238, 64, 53, 0.1)',
+        color: status === 'active' ? 'var(--success)' : 'var(--danger)',
+        border: `1px solid ${status === 'active' ? 'rgba(5, 163, 87, 0.2)' : 'rgba(238, 64, 53, 0.2)'}`
     }),
-    emptyRow: { textAlign: 'center', padding: '40px', color: '#000000', fontSize: '15px' },
+    emptyRow: { textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '15px' },
     // ── Detail panel (accordion)
-    detailCell: { padding: 0, borderBottom: '2px solid #ede7f6', backgroundColor: '#faf7ff' },
+    detailCell: { padding: 0, borderBottom: '2px solid var(--border)', backgroundColor: 'var(--surface)' },
     detailInner: { padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' },
     detailSection: { minWidth: 0 },
     detailHeading: { fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.6px', color: '#7c4dff', marginBottom: '8px' },
-    detailItem: { fontSize: '13px', color: '#000000', padding: '5px 0', borderBottom: '1px solid #f0e6ff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    detailMuted: { fontSize: '13px', color: '#000000', fontStyle: 'italic' },
+    detailItem: { fontSize: '13px', color: 'var(--text-main)', padding: '5px 0', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+    detailMuted: { fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' },
     detailBadge: { fontSize: '11px', padding: '2px 7px', borderRadius: '8px', backgroundColor: '#ede7f6', color: '#5e35b1', fontWeight: 600 },
     // ── Modal
-    overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200 },
-    modal: { position: 'relative', backgroundColor: '#fff', borderRadius: '14px', padding: '32px', width: '90%', maxWidth: '480px', boxShadow: '0 8px 40px rgba(0,0,0,0.18)', maxHeight: '90vh', overflowY: 'auto' },
+    overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200, backdropFilter: 'blur(4px)' },
+    modal: { position: 'relative', backgroundColor: 'var(--background)', borderRadius: '14px', padding: '32px', width: '90%', maxWidth: '480px', boxShadow: '0 8px 40px rgba(0,0,0,0.18)', maxHeight: '90vh', overflowY: 'auto', border: '1px solid var(--border)' },
     closeX: {
-        position: 'absolute', top: '15px', right: '15px', border: 'none', background: 'none', fontSize: '22px', cursor: 'pointer', color: '#000000', opacity: 0.5,
+        position: 'absolute', top: '15px', right: '15px', border: 'none', background: 'none', fontSize: '22px', cursor: 'pointer', color: 'var(--text-main)', opacity: 0.5,
         display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'opacity 0.2s', padding: '5px'
     },
-    modalTitle: { margin: '0 0 22px 0', fontSize: '20px', fontWeight: 700, color: '#1a1a2e' },
+    modalTitle: { margin: '0 0 22px 0', fontSize: '20px', fontWeight: 700, color: 'var(--text-main)' },
     formGroup: { marginBottom: '16px' },
-    label: { display: 'block', marginBottom: '5px', fontSize: '13px', fontWeight: 600, color: '#000000' },
-    input: { width: '100%', padding: '10px 12px', borderRadius: '7px', border: '1px solid #999', fontSize: '14px', boxSizing: 'border-box', outline: 'none', color: '#000000' },
-    divider: { borderTop: '1px dashed #cccccc', margin: '18px 0', fontSize: '11px', color: '#000000', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 },
+    label: { display: 'block', marginBottom: '5px', fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' },
+    input: { width: '100%', padding: '10px 12px', borderRadius: '7px', border: '1px solid var(--border)', backgroundColor: 'var(--surface)', fontSize: '14px', boxSizing: 'border-box', outline: 'none', color: 'var(--text-main)' },
+    divider: { borderTop: '1px dashed var(--border)', margin: '18px 0', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 },
     btnRow: { display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '22px' },
-    cancelBtn: { padding: '10px 22px', background: 'transparent', border: '1px solid #000000', color: '#000000', borderRadius: '7px', cursor: 'pointer', fontSize: '14px', fontWeight: 600 },
+    cancelBtn: { padding: '10px 22px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-main)', borderRadius: '7px', cursor: 'pointer', fontSize: '14px', fontWeight: 600 },
     submitBtn: (loading) => ({
         padding: '10px 22px', backgroundColor: loading ? '#9e9e9e' : '#673ab7',
         color: '#fff', border: 'none', borderRadius: '7px', cursor: loading ? 'not-allowed' : 'pointer',
         fontWeight: 600, fontSize: '14px', minWidth: '120px',
     }),
-    errorBox: { backgroundColor: '#fdecea', border: '1px solid #f5c6cb', borderRadius: '7px', padding: '10px 14px', color: '#b71c1c', fontSize: '13px', marginBottom: '14px' },
-    successBox: { backgroundColor: '#e8f5e9', border: '1px solid #c8e6c9', borderRadius: '7px', padding: '10px 14px', color: '#1b5e20', fontSize: '13px', marginBottom: '14px' },
+    errorBox: { backgroundColor: 'rgba(238, 64, 53, 0.1)', border: '1px solid rgba(238, 64, 53, 0.2)', borderRadius: '7px', padding: '10px 14px', color: 'var(--danger)', fontSize: '13px', marginBottom: '14px' },
+    successBox: { backgroundColor: 'rgba(5, 163, 87, 0.1)', border: '1px solid rgba(5, 163, 87, 0.2)', borderRadius: '7px', padding: '10px 14px', color: 'var(--success)', fontSize: '13px', marginBottom: '14px' },
     // ── Tabs
-    tabBar: { display: 'flex', gap: '8px', marginBottom: '24px', backgroundColor: '#f0f0f5', padding: '5px', borderRadius: '12px', width: 'fit-content' },
+    tabBar: { display: 'flex', gap: '8px', marginBottom: '24px', backgroundColor: 'var(--surface)', padding: '5px', borderRadius: '12px', width: 'fit-content', border: '1px solid var(--border)' },
     tab: (active) => ({
         padding: '8px 20px', borderRadius: '9px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
-        backgroundColor: active ? '#fff' : 'transparent', color: active ? '#673ab7' : '#000000',
+        backgroundColor: active ? 'var(--background)' : 'transparent', color: active ? '#673ab7' : 'var(--text-muted)',
         boxShadow: active ? '0 2px 8px rgba(0,0,0,0.08)' : 'none', border: 'none'
     }),
     sourceBadge: (isSystem) => ({
@@ -106,7 +109,7 @@ const S = {
 async function fetchShops() {
     const { data, error } = await supabase
         .from('shops')
-        .select('id, name, address, phone, created_at, is_active, image_url, features, rating, gallery_urls')
+        .select('id, name, address, phone, created_at, is_active, image_url, features, rating, gallery_urls, latitude, longitude')
         .order('created_at', { ascending: false });
     if (error) throw error;
     return data ?? [];
@@ -143,7 +146,7 @@ async function fetchShopProducts(shopId) {
 
 // FIX: removed `status` from INSERT — the column may not exist yet.
 // Once you add the column via SQL, this insert will still work (DB default = 'active').
-async function createShopAndOwner({ shopName, address, phone, ownerPhone, password, image_url, rating, features, gallery_urls }) {
+async function createShopAndOwner({ shopName, address, phone, ownerPhone, password, image_url, rating, features, gallery_urls, latitude, longitude }) {
     const ownerEmail = `${ownerPhone}@shopowner.app`;
 
     // Process array fields
@@ -169,7 +172,9 @@ async function createShopAndOwner({ shopName, address, phone, ownerPhone, passwo
             image_url: image_url?.trim() || null,
             rating: ratingValue,
             features: featuresArray,
-            gallery_urls: galleryArray
+            gallery_urls: galleryArray,
+            latitude: parseFloat(latitude) || null,
+            longitude: parseFloat(longitude) || null
         }])
         .select()
         .single();
@@ -228,7 +233,7 @@ async function createShopAndOwner({ shopName, address, phone, ownerPhone, passwo
     return { shop, authWarning: authErr?.message ?? null };
 }
 
-async function updateShopAndOwner(shopId, { shopName, address, phone, ownerPhone, password, image_url, rating, features, gallery_urls }) {
+async function updateShopAndOwner(shopId, { shopName, address, phone, ownerPhone, password, image_url, rating, features, gallery_urls, latitude, longitude }) {
     // Process array fields
     const featuresArray = features ? (Array.isArray(features) ? features : features.split(',').map(f => f.trim()).filter(Boolean)) : [];
     const galleryArray = gallery_urls ? (Array.isArray(gallery_urls) ? gallery_urls : gallery_urls.split(',').map(u => u.trim()).filter(Boolean)) : [];
@@ -244,7 +249,9 @@ async function updateShopAndOwner(shopId, { shopName, address, phone, ownerPhone
             image_url: image_url?.trim() || null,
             rating: ratingValue,
             features: featuresArray,
-            gallery_urls: galleryArray
+            gallery_urls: galleryArray,
+            latitude: parseFloat(latitude) || null,
+            longitude: parseFloat(longitude) || null
         })
         .eq('id', shopId);
     if (shopErr) throw shopErr;
@@ -300,7 +307,7 @@ async function updateShopAndOwner(shopId, { shopName, address, phone, ownerPhone
 /* ─────────────────────────────────────────────────────────────
    SHOP DETAIL PANEL (accordion content)
 ───────────────────────────────────────────────────────────── */
-const ShopDetailPanel = ({ shopId }) => {
+const ShopDetailPanel = ({ shopId, latitude, longitude }) => {
     const [owner, setOwner] = useState(null);
     const [services, setServices] = useState([]);
     const [products, setProducts] = useState([]);
@@ -497,6 +504,19 @@ const ShopDetailPanel = ({ shopId }) => {
                         ))
                     )}
                 </div>
+
+                {/* Location */}
+                <div style={S.detailSection}>
+                    <div style={S.detailHeading}>📍 Location Coordinates</div>
+                    <div style={S.detailItem}>
+                        <span>Latitude:</span>
+                        <span style={S.detailBadge}>{latitude || 'Not set'}</span>
+                    </div>
+                    <div style={S.detailItem}>
+                        <span>Longitude:</span>
+                        <span style={S.detailBadge}>{longitude || 'Not set'}</span>
+                    </div>
+                </div>
             </div>
             
             {showAnalytics && (
@@ -571,7 +591,9 @@ const EMPTY_FORM = {
     image_url: '',
     rating: 5.0,
     features: '',
-    gallery_urls: ''
+    gallery_urls: '',
+    latitude: '',
+    longitude: ''
 };
 
 /* ─────────────────────────────────────────────────────────────
@@ -588,6 +610,7 @@ const ShopsManagement = () => {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [uploadingImage, setUploadingImage] = useState(false);
 
     const [activeTab, setActiveTab] = useState('shops'); // 'shops' | 'products'
     const [allProducts, setAllProducts] = useState([]);
@@ -636,7 +659,32 @@ const ShopsManagement = () => {
         }
     };
 
-    const handleChange = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }));
+    const handleChange = (field) => (e) => {
+        setForm({ ...form, [field]: e.target.value });
+    };
+
+    const handleFileChange = async (e, field = 'image_url') => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setUploadingImage(true);
+        setError('');
+        try {
+            const url = await uploadImage(file, 'images', 'shops');
+            if (field === 'gallery_urls') {
+                const current = form.gallery_urls ? form.gallery_urls.trim() : '';
+                const updated = current ? `${current}, ${url}` : url;
+                setForm(prev => ({ ...prev, gallery_urls: updated }));
+            } else {
+                setForm(prev => ({ ...prev, [field]: url }));
+            }
+            setSuccess('Image uploaded successfully!');
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setUploadingImage(false);
+        }
+    };
 
     const openModal = () => { setEditingShop(null); setForm(EMPTY_FORM); setError(''); setSuccess(''); setShowModal(true); };
     const closeModal = () => setShowModal(false);
@@ -654,6 +702,8 @@ const ShopsManagement = () => {
             rating: shop.rating || 5.0,
             features: Array.isArray(shop.features) ? shop.features.join(', ') : '',
             gallery_urls: Array.isArray(shop.gallery_urls) ? shop.gallery_urls.join(', ') : '',
+            latitude: shop.latitude || '',
+            longitude: shop.longitude || '',
         });
         setError(''); setSuccess(''); setShowModal(true);
     };
@@ -837,7 +887,7 @@ const ShopsManagement = () => {
                         <button onClick={() => { setLoadError(null); loadShops(); }} style={{ marginLeft: '10px', padding: '4px 8px' }}>Retry</button>
                     </div>
                 ) : fetching ? (
-                    <p style={{ color: '#000000' }}>Loading shops...</p>
+                    <p style={{ color: 'var(--text-main)' }}>Loading shops...</p>
                 ) : (
                     <div className="responsive-table-container">
                         <table style={S.table}>
@@ -856,19 +906,25 @@ const ShopsManagement = () => {
                                 ) : (
                                     shops.map(shop => {
                                         const isExpanded = expandedId === shop.id;
-                                        const createdDate = shop.created_at
-                                            ? new Date(shop.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-                                            : '—';
                                         return (
                                             <React.Fragment key={shop.id}>
                                                 <tr
-                                                    style={S.clickRow(isExpanded)}
+                                                    style={{ ...S.clickRow(isExpanded), borderBottom: '1px solid var(--border)' }}
                                                     onClick={() => toggleRow(shop.id)}
                                                 >
-                                                    <td style={{ ...S.td, width: '36px', fontSize: '12px', color: '#9575cd' }}>
+                                                    <td style={{ ...S.td, width: '36px', fontSize: '12px', color: 'var(--primary)' }}>
                                                         {isExpanded ? '▼' : '▶'}
                                                     </td>
-                                                    <td style={{ ...S.td, fontWeight: 600, minWidth: '110px' }}>{shop.name}</td>
+                                                    <td style={{ padding: '20px 24px' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--surface)', overflow: 'hidden' }}>
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontWeight: '600', color: 'var(--text-main)', fontSize: '0.95rem' }}>{shop.name}</div>
+                                                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>ID: {shop.id.slice(0, 8)}</div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
                                                     <td style={{ ...S.tdMuted, minWidth: '110px' }}>{shop.address || '—'}</td>
                                                     <td style={{ ...S.td, minWidth: '70px' }}>
                                                         <span style={S.statusBadge(shop.is_active)}>
@@ -885,7 +941,11 @@ const ShopsManagement = () => {
                                                 </tr>
                                                 {isExpanded && (
                                                     <tr key={`detail-${shop.id}`}>
-                                                        <ShopDetailPanel shopId={shop.id} />
+                                                        <ShopDetailPanel 
+                                                            shopId={shop.id} 
+                                                            latitude={shop.latitude} 
+                                                            longitude={shop.longitude} 
+                                                        />
                                                     </tr>
                                                 )}
                                             </React.Fragment>
@@ -901,7 +961,7 @@ const ShopsManagement = () => {
             {/* ── PRODUCTS TAB ── */}
             {activeTab === 'products' && (
                 fetchingProducts ? (
-                    <p style={{ color: '#000000' }}>Loading inventory...</p>
+                    <p style={{ color: 'var(--text-main)' }}>Loading inventory...</p>
                 ) : (
                     <div className="responsive-table-container">
                         <table style={S.table}>
@@ -922,7 +982,7 @@ const ShopsManagement = () => {
                                         <tr key={p.id}>
                                              <td style={{ ...S.td, fontWeight: 600, minWidth: '120px' }}>{p.name}</td>
                                              <td style={{ ...S.td, minWidth: '60px' }}>₹{p.price}</td>
-                                             <td style={{ ...S.td, color: p.stock > 0 ? '#333' : '#e53935', minWidth: '60px' }}>{p.stock}</td>
+                                             <td style={{ ...S.td, color: p.stock > 0 ? 'var(--text-main)' : 'var(--error)', minWidth: '60px' }}>{p.stock}</td>
                                              <td style={{ ...S.td, minWidth: '120px' }}>
                                                  <span style={S.sourceBadge(!p.shop_id)}>
                                                      {p.shop_id ? `🏪 ${p.shops?.name || 'Shop'}` : '🏛️ System'}
@@ -931,7 +991,7 @@ const ShopsManagement = () => {
                                              <td style={{ ...S.td, minWidth: '70px', textAlign: 'right' }}>
                                                 <div style={{ display: 'flex', gap: '10px' }}>
                                                     <button
-                                                        style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', color: '#673ab7' }}
+                                                        style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', color: 'var(--primary)' }}
                                                         onClick={() => openProductEditModal(p)}
                                                     >✏️</button>
                                                     <button
@@ -974,9 +1034,35 @@ const ShopsManagement = () => {
                                     value={form.phone} onChange={handleChange('phone')} />
                             </div>
                             <div style={S.formGroup}>
-                                <label style={S.label} htmlFor="shopImage">Shop Hero Image URL</label>
-                                <input id="shopImage" style={S.input} type="text" placeholder="e.g. /assets/salman.jpeg"
-                                    value={form.image_url} onChange={handleChange('image_url')} />
+                                <label style={S.label} htmlFor="shopImage">Shop Hero Image</label>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <input id="shopImage" style={{ ...S.input, flex: 1 }} type="text" placeholder="URL or Upload -->"
+                                        value={form.image_url} onChange={handleChange('image_url')} />
+                                    <label style={{ 
+                                        padding: '8px 12px', backgroundColor: '#eee', borderRadius: '7px', cursor: 'pointer',
+                                        fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center'
+                                    }}>
+                                        {uploadingImage ? '...' : '📁 Upload'}
+                                        <input type="file" style={{ display: 'none' }} accept="image/*" 
+                                            onChange={(e) => handleFileChange(e, 'image_url')} disabled={uploadingImage} />
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div style={S.formGroup}>
+                                <label style={S.label} htmlFor="gallery">Gallery Images (comma separated)</label>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <textarea id="gallery" style={{ ...S.input, flex: 1, height: '60px', resize: 'vertical' }} placeholder="url1, url2, url3"
+                                        value={form.gallery_urls} onChange={handleChange('gallery_urls')} />
+                                    <label style={{ 
+                                        padding: '8px 12px', backgroundColor: '#eee', borderRadius: '7px', cursor: 'pointer',
+                                        fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', height: 'fit-content'
+                                    }}>
+                                        {uploadingImage ? '...' : '📁 +'}
+                                        <input type="file" style={{ display: 'none' }} accept="image/*" 
+                                            onChange={(e) => handleFileChange(e, 'gallery_urls')} disabled={uploadingImage} />
+                                    </label>
+                                </div>
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
@@ -992,10 +1078,18 @@ const ShopsManagement = () => {
                                 </div>
                             </div>
 
-                            <div style={S.formGroup}>
-                                <label style={S.label} htmlFor="gallery">Gallery Image URLs (comma separated)</label>
-                                <textarea id="gallery" style={{ ...S.input, height: '60px', resize: 'vertical' }} placeholder="url1, url2, url3"
-                                    value={form.gallery_urls} onChange={handleChange('gallery_urls')} />
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                <div style={S.formGroup}>
+                                    <label style={S.label} htmlFor="latitude">Latitude</label>
+                                    <input id="latitude" style={S.input} type="number" step="any" placeholder="e.g. 23.1864"
+                                        value={form.latitude} onChange={handleChange('latitude')} />
+                                </div>
+                                <div style={S.formGroup}>
+                                    <label style={S.label} htmlFor="longitude">Longitude</label>
+                                    <input id="longitude" style={S.input} type="number" step="any" placeholder="e.g. 77.4267"
+                                        value={form.longitude} onChange={handleChange('longitude')} />
+                                </div>
                             </div>
 
                             <div style={S.divider}>{editingShop ? 'Owner Auth (Optional)' : 'Owner Auth (Phone)'}</div>
@@ -1016,7 +1110,7 @@ const ShopsManagement = () => {
                                     value={form.password} onChange={handleChange('password')}
                                     required={!editingShop} />
                             </div>
-                            <p style={{ fontSize: '11px', color: '#000000', margin: '0 0 10px' }}>
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 10px' }}>
                                 {editingShop
                                     ? 'ℹ️ Leave blank to keep current credentials.'
                                     : 'ℹ️ The owner will log in with this phone and password.'}

@@ -35,7 +35,7 @@ const getServiceIcon = (name) => {
     return <ServiceIcons.Default />;
 };
 
-const Saloons = () => {
+const Salons = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const { shops, queueData, availableServices, geoLoading, getLocation } = useShop();
@@ -90,16 +90,17 @@ const Saloons = () => {
             marginTop: '0px',
             paddingBottom: '120px', 
             minHeight: '100vh', 
-            background: '#FFFFFF',
-            color: '#000000'
+            background: 'var(--background)',
+            color: 'var(--text-main)',
+            transition: 'all 0.4s ease'
         }}>
             {/* Premium Header */}
             <motion.div 
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 style={{
-                    background: '#F6F6F6',
-                    border: '1px solid #EEEEEE',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
                     borderRadius: '28px',
                     padding: '32px',
                     marginBottom: '40px',
@@ -109,12 +110,12 @@ const Saloons = () => {
                 }}
             >
                 <motion.button 
-                    whileHover={{ scale: 1.05, background: '#000', color: '#FFF' }}
+                    whileHover={{ scale: 1.05, background: 'var(--text-main)', color: 'var(--background)' }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => navigate('/')}
                     style={{ 
-                        background: '#FFF', 
-                        border: 'none', 
+                        background: 'var(--background)', 
+                        border: '1px solid var(--border)', 
                         width: '44px', 
                         height: '44px', 
                         borderRadius: '16px', 
@@ -122,8 +123,8 @@ const Saloons = () => {
                         alignItems: 'center', 
                         justifyContent: 'center', 
                         cursor: 'pointer',
-                        color: '#000',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                        color: 'var(--text-main)',
+                        boxShadow: 'var(--shadow-premium)'
                     }}
                 >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -131,8 +132,8 @@ const Saloons = () => {
                     </svg>
                 </motion.button>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <h1 style={{ fontSize: '1.2rem', fontWeight: '950', letterSpacing: '-0.5px', margin: 0, color: '#000000' }}>Explore</h1>
-                    <p style={{ fontSize: '0.8rem', color: 'rgba(0, 0, 0, 0.4)', fontWeight: '900', letterSpacing: '1px', textTransform: 'uppercase', margin: 0 }}>Find your studio</p>
+                    <h1 style={{ fontSize: '1.2rem', fontWeight: '950', letterSpacing: '-0.5px', margin: 0, color: 'var(--text-main)' }}>Salons</h1>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '900', letterSpacing: '1px', textTransform: 'uppercase', margin: 0 }}>Find your studio</p>
                 </div>
             </motion.div>
 
@@ -146,6 +147,38 @@ const Saloons = () => {
                 scrollbarWidth: 'none',
                 WebkitOverflowScrolling: 'touch'
             }}>
+                {/* All Services Toggle */}
+                <motion.button
+                    whileHover={{ y: -1 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => {
+                        searchParams.delete('service');
+                        setSearchParams(searchParams);
+                    }}
+                    style={{
+                        padding: '10px 18px',
+                        borderRadius: '12px',
+                        border: '1px solid',
+                        borderColor: !serviceFilter ? 'var(--text-main)' : 'var(--border)',
+                        background: !serviceFilter ? 'var(--text-main)' : 'var(--surface)',
+                        color: !serviceFilter ? 'var(--background)' : 'var(--text-main)',
+                        fontWeight: '800',
+                        fontSize: '0.8rem',
+                        whiteSpace: 'nowrap',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: !serviceFilter ? '0 8px 16px rgba(0,0,0,0.2)' : 'var(--shadow-premium)'
+                    }}
+                >
+                    <span style={{ display: 'flex', alignItems: 'center', opacity: !serviceFilter ? 1 : 0.4, transform: 'scale(0.85)' }}>
+                        <ServiceIcons.Default />
+                    </span>
+                    All Services
+                </motion.button>
+
                 {availableServices.map(service => {
                     const name = typeof service === 'string' ? service : (service?.name || 'Service');
                     const isActive = serviceFilter === name;
@@ -159,9 +192,9 @@ const Saloons = () => {
                                 padding: '10px 18px',
                                 borderRadius: '12px',
                                 border: '1px solid',
-                                borderColor: isActive ? '#000' : '#F0F0F0',
-                                background: isActive ? '#000' : '#FFF',
-                                color: isActive ? '#FFF' : '#000',
+                                borderColor: isActive ? 'var(--primary)' : 'var(--border)',
+                                background: isActive ? 'var(--primary)' : 'var(--surface)',
+                                color: isActive ? '#FFF' : 'var(--text-main)',
                                 fontWeight: '800',
                                 fontSize: '0.8rem',
                                 whiteSpace: 'nowrap',
@@ -170,7 +203,7 @@ const Saloons = () => {
                                 gap: '6px',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s ease',
-                                boxShadow: isActive ? '0 8px 16px rgba(0,0,0,0.08)' : '0 2px 6px rgba(0,0,0,0.01)'
+                                boxShadow: isActive ? '0 8px 16px rgba(39, 110, 241, 0.2)' : 'var(--shadow-premium)'
                             }}
                         >
                             <span style={{ display: 'flex', alignItems: 'center', opacity: isActive ? 1 : 0.4, transform: 'scale(0.85)' }}>
@@ -193,18 +226,18 @@ const Saloons = () => {
                     whileHover={{ y: -3 }}
                     style={{
                         padding: '24px 20px',
-                        background: '#FFF',
+                        background: 'var(--surface)',
                         borderRadius: '24px',
-                        border: '1px solid #F0F0F0',
+                        border: '1px solid var(--border)',
                         position: 'relative',
                         overflow: 'hidden',
-                        boxShadow: '0 4px 15px rgba(0,0,0,0.02)'
+                        boxShadow: 'var(--shadow-premium)'
                     }}
                 >
-                    <div style={{ position: 'absolute', top: '10%', right: '-5%', fontSize: '4rem', opacity: 0.02, fontWeight: '900', color: '#000', transform: 'rotate(-15deg)' }}>★</div>
+                    <div style={{ position: 'absolute', top: '10%', right: '-5%', fontSize: '4rem', opacity: 0.05, fontWeight: '900', color: 'var(--text-main)', transform: 'rotate(-15deg)' }}>★</div>
                     <div style={{ position: 'relative', zIndex: 2 }}>
                         <span style={{ fontSize: '0.6rem', fontWeight: '900', color: '#276EF1', textTransform: 'uppercase', letterSpacing: '1.5px', display: 'block', marginBottom: '8px' }}>Standard</span>
-                        <h3 style={{ fontSize: '1rem', fontWeight: '950', color: '#000', margin: 0, letterSpacing: '-0.3px' }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: '950', color: 'var(--text-main)', margin: 0, letterSpacing: '-0.3px' }}>
                             Elite <span style={{ color: '#276EF1' }}>Top 5%</span>
                         </h3>
                     </div>
@@ -214,18 +247,18 @@ const Saloons = () => {
                     whileHover={{ y: -3 }}
                     style={{
                         padding: '24px 20px',
-                        background: '#FFF',
+                        background: 'var(--surface)',
                         borderRadius: '24px',
-                        border: '1px solid #F0F0F0',
+                        border: '1px solid var(--border)',
                         position: 'relative',
                         overflow: 'hidden',
-                        boxShadow: '0 4px 15px rgba(0,0,0,0.02)'
+                        boxShadow: 'var(--shadow-premium)'
                     }}
                 >
-                    <div style={{ position: 'absolute', top: '10%', right: '-5%', fontSize: '4rem', opacity: 0.02, fontWeight: '900', color: '#000', transform: 'rotate(15deg)' }}>✂</div>
+                    <div style={{ position: 'absolute', top: '10%', right: '-5%', fontSize: '4rem', opacity: 0.05, fontWeight: '900', color: 'var(--text-main)', transform: 'rotate(15deg)' }}>✂</div>
                     <div style={{ position: 'relative', zIndex: 2 }}>
-                        <span style={{ fontSize: '0.6rem', fontWeight: '900', color: '#AAA', textTransform: 'uppercase', letterSpacing: '1.5px', display: 'block', marginBottom: '8px' }}>Artisan</span>
-                        <h3 style={{ fontSize: '1rem', fontWeight: '950', color: '#000', margin: 0, letterSpacing: '-0.3px' }}>
+                        <span style={{ fontSize: '0.6rem', fontWeight: '900', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', display: 'block', marginBottom: '8px' }}>Artisan</span>
+                        <h3 style={{ fontSize: '1rem', fontWeight: '950', color: 'var(--text-main)', margin: 0, letterSpacing: '-0.3px' }}>
                             Master Fades
                         </h3>
                     </div>
@@ -239,20 +272,20 @@ const Saloons = () => {
                 alignItems: 'center', 
                 marginBottom: '32px',
                 padding: '8px 16px',
-                background: '#FFF',
+                background: 'var(--surface)',
                 borderRadius: '16px',
-                border: '1px solid #F0F0F0',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.02)'
+                border: '1px solid var(--border)',
+                boxShadow: 'var(--shadow-premium)'
             }}>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.65rem', fontWeight: '900', color: '#DDD', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Sort:</span>
+                    <span style={{ fontSize: '0.65rem', fontWeight: '900', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Sort:</span>
                     <select 
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value)}
                         style={{
                             background: 'transparent',
                             border: 'none',
-                            color: '#000',
+                            color: 'var(--text-main)',
                             fontWeight: '800',
                             fontSize: '0.85rem',
                             outline: 'none',
@@ -265,13 +298,13 @@ const Saloons = () => {
                     </select>
                 </div>
                 <motion.button 
-                    whileHover={{ background: '#FAFAFA' }}
+                    whileHover={{ background: 'var(--background)' }}
                     whileTap={{ scale: 0.98 }}
                     onClick={getLocation}
                     style={{ 
-                        background: '#FFF', 
-                        border: '1px solid #F0F0F0', 
-                        color: '#000', 
+                        background: 'var(--surface)', 
+                        border: '1px solid var(--border)', 
+                        color: 'var(--text-main)', 
                         fontWeight: '800', 
                         fontSize: '0.75rem', 
                         cursor: 'pointer',
@@ -295,15 +328,20 @@ const Saloons = () => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.05 }}
                         whileHover={{ y: -4, boxShadow: '0 20px 40px rgba(0,0,0,0.04)' }}
-                        onClick={() => navigate(`/queue?shopId=${shop.id}`)}
+                        onClick={() => {
+                            const path = serviceFilter 
+                                ? `/queue?shopId=${shop.id}&service=${encodeURIComponent(serviceFilter)}`
+                                : `/queue?shopId=${shop.id}`;
+                            navigate(path);
+                        }}
                         style={{
-                            background: '#FFFFFF',
+                            background: 'var(--surface)',
                             borderRadius: '32px',
                             overflow: 'hidden',
-                            border: '1px solid #F5F5F5',
+                            border: '1px solid var(--border)',
                             cursor: 'pointer',
                             position: 'relative',
-                            boxShadow: '0 10px 25px rgba(0,0,0,0.015)',
+                            boxShadow: 'var(--shadow-premium)',
                             transition: 'all 0.3s ease'
                         }}
                     >
@@ -327,15 +365,15 @@ const Saloons = () => {
                             </div>
                             <div style={{ padding: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ flex: 1 }}>
-                                    <h3 style={{ fontSize: '1.2rem', fontWeight: '950', color: '#000', marginBottom: '4px', letterSpacing: '-0.3px' }}>{shop.name}</h3>
-                                    <p style={{ fontSize: '0.8rem', color: '#999', fontWeight: '700', margin: 0 }}>
+                                    <h3 style={{ fontSize: '1.2rem', fontWeight: '950', color: 'var(--text-main)', marginBottom: '4px', letterSpacing: '-0.3px' }}>{shop.name}</h3>
+                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '700', margin: 0 }}>
                                         {shop.address || 'Premium Grooming Studio'}
                                     </p>
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
                                     <div style={{ 
-                                        background: '#F8F8F8', padding: '5px 12px', borderRadius: '10px', 
-                                        fontSize: '0.7rem', fontWeight: '900', color: '#000', border: '1px solid #EEE'
+                                        background: 'var(--background)', padding: '5px 12px', borderRadius: '10px', 
+                                        fontSize: '0.7rem', fontWeight: '900', color: 'var(--text-main)', border: '1px solid var(--border)'
                                     }}>
                                         {queueData[shop.id] || 0} Waiting
                                     </div>
@@ -353,12 +391,12 @@ const Saloons = () => {
             {filteredAndSortedShops.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '120px 20px' }}>
                     <div style={{ fontSize: '5rem', marginBottom: '32px', opacity: 0.1 }}>🔭</div>
-                    <h2 style={{ fontWeight: '950', color: '#000', marginBottom: '12px', fontSize: '2rem' }}>No matches</h2>
-                    <p style={{ color: 'rgba(0,0,0,0.4)', fontWeight: '700' }}>Try adjusting your filters.</p>
+                    <h2 style={{ fontWeight: '950', color: 'var(--text-main)', marginBottom: '12px', fontSize: '2rem' }}>No matches</h2>
+                    <p style={{ color: 'var(--text-muted)', fontWeight: '700' }}>Try adjusting your filters.</p>
                 </div>
             )}
         </div>
     );
 };
 
-export default Saloons;
+export default Salons;

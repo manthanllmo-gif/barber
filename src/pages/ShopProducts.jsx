@@ -13,6 +13,16 @@ const ShopProducts = () => {
     const [sortBy, setSortBy] = useState('newest'); // 'newest', 'price-low', 'price-high', 'name'
     const [selectedProduct, setSelectedProduct] = useState(null);
     const categoryFilter = searchParams.get('category') || '';
+    const urlProductId = searchParams.get('productId');
+
+    React.useEffect(() => {
+        if (urlProductId && products.length > 0) {
+            const product = products.find(p => p.id === urlProductId);
+            if (product) {
+                setSelectedProduct(product);
+            }
+        }
+    }, [urlProductId, products]);
 
     const filteredAndSortedProducts = useMemo(() => {
         let result = [...products];
@@ -44,14 +54,14 @@ const ShopProducts = () => {
     };
 
     return (
-        <div style={{ padding: '24px', paddingTop: '80px', marginTop: '0px', paddingBottom: '100px', minHeight: '100vh', background: '#FFFFFF' }}>
+        <div style={{ padding: '24px', paddingTop: '80px', marginTop: '0px', paddingBottom: '100px', minHeight: '100vh', background: 'var(--background)' }}>
             {/* Premium Header */}
             <motion.div 
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 style={{
-                    background: '#F6F6F6',
-                    border: '1px solid #EEEEEE',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
                     borderRadius: '28px',
                     padding: '32px',
                     marginBottom: '40px',
@@ -61,12 +71,12 @@ const ShopProducts = () => {
                 }}
             >
                 <motion.button 
-                    whileHover={{ scale: 1.05, background: '#000', color: '#FFF' }}
+                    whileHover={{ scale: 1.05, background: 'var(--text-main)', color: 'var(--background)' }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => navigate('/')}
                     style={{ 
-                        background: '#FFF', 
-                        border: 'none', 
+                        background: 'var(--background)', 
+                        border: '1px solid var(--border)', 
                         width: '44px', 
                         height: '44px', 
                         borderRadius: '16px', 
@@ -74,8 +84,8 @@ const ShopProducts = () => {
                         alignItems: 'center', 
                         justifyContent: 'center', 
                         cursor: 'pointer',
-                        color: '#000',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                        color: 'var(--text-main)',
+                        boxShadow: 'var(--shadow-premium)'
                     }}
                 >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -83,8 +93,8 @@ const ShopProducts = () => {
                     </svg>
                 </motion.button>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <h1 style={{ fontSize: '1.2rem', fontWeight: '950', letterSpacing: '-0.5px', margin: 0, color: '#000000' }}>Shop</h1>
-                    <p style={{ fontSize: '0.8rem', color: 'rgba(0, 0, 0, 0.4)', fontWeight: '900', letterSpacing: '1px', textTransform: 'uppercase', margin: 0 }}>Premium Gear</p>
+                    <h1 style={{ fontSize: '1.2rem', fontWeight: '950', letterSpacing: '-0.5px', margin: 0, color: 'var(--text-main)' }}>Shop</h1>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '900', letterSpacing: '1px', textTransform: 'uppercase', margin: 0 }}>Premium Gear</p>
                 </div>
             </motion.div>
 
@@ -107,15 +117,15 @@ const ShopProducts = () => {
                         padding: '10px 20px',
                         borderRadius: '12px',
                         border: '1px solid',
-                        borderColor: !categoryFilter ? '#000' : '#F0F0F0',
-                        background: !categoryFilter ? '#000' : '#FFF',
-                        color: !categoryFilter ? '#FFF' : '#000',
+                        borderColor: !categoryFilter ? 'var(--text-main)' : 'var(--border)',
+                        background: !categoryFilter ? 'var(--text-main)' : 'var(--surface)',
+                        color: !categoryFilter ? 'var(--background)' : 'var(--text-main)',
                         fontWeight: '800',
                         fontSize: '0.8rem',
                         whiteSpace: 'nowrap',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
-                        boxShadow: !categoryFilter ? '0 8px 16px rgba(0,0,0,0.08)' : '0 2px 6px rgba(0,0,0,0.01)'
+                        boxShadow: !categoryFilter ? '0 8px 16px rgba(0,0,0,0.08)' : 'var(--shadow-premium)'
                     }}
                 >
                     All Items
@@ -134,15 +144,15 @@ const ShopProducts = () => {
                                 padding: '10px 20px',
                                 borderRadius: '12px',
                                 border: '1px solid',
-                                borderColor: isActive ? '#000' : '#F0F0F0',
-                                background: isActive ? '#000' : '#FFF',
-                                color: isActive ? '#FFF' : '#000',
+                                borderColor: isActive ? 'var(--text-main)' : 'var(--border)',
+                                background: isActive ? 'var(--text-main)' : 'var(--surface)',
+                                color: isActive ? 'var(--background)' : 'var(--text-main)',
                                 fontWeight: '800',
                                 fontSize: '0.8rem',
                                 whiteSpace: 'nowrap',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s ease',
-                                boxShadow: isActive ? '0 8px 16px rgba(0,0,0,0.08)' : '0 2px 6px rgba(0,0,0,0.01)'
+                                boxShadow: isActive ? '0 8px 16px rgba(0,0,0,0.08)' : 'var(--shadow-premium)'
                             }}
                         >
                             {name}
@@ -162,17 +172,17 @@ const ShopProducts = () => {
                     whileHover={{ y: -3 }}
                     style={{
                         padding: '20px',
-                        background: '#FFF',
+                        background: 'var(--surface)',
                         borderRadius: '24px',
-                        border: '1px solid #F0F0F0',
+                        border: '1px solid var(--border)',
                         position: 'relative',
                         overflow: 'hidden',
-                        boxShadow: '0 4px 15px rgba(0,0,0,0.02)'
+                        boxShadow: 'var(--shadow-premium)'
                     }}
                 >
-                    <div style={{ position: 'absolute', top: '-5px', right: '-5px', fontSize: '2.5rem', opacity: 0.05, fontWeight: '900', color: '#000' }}>✦</div>
-                    <span style={{ fontSize: '0.6rem', fontWeight: '900', color: '#AAA', textTransform: 'uppercase', letterSpacing: '1.5px', display: 'block', marginBottom: '4px' }}>Selection</span>
-                    <p style={{ fontSize: '0.9rem', fontWeight: '950', color: '#000', margin: 0, lineHeight: '1.1' }}>
+                    <div style={{ position: 'absolute', top: '-5px', right: '-5px', fontSize: '2.5rem', opacity: 0.05, fontWeight: '900', color: 'var(--text-main)' }}>✦</div>
+                    <span style={{ fontSize: '0.6rem', fontWeight: '900', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', display: 'block', marginBottom: '4px' }}>Selection</span>
+                    <p style={{ fontSize: '0.9rem', fontWeight: '950', color: 'var(--text-main)', margin: 0, lineHeight: '1.1' }}>
                         Curated <span style={{ color: '#276EF1' }}>Elite</span> Gear
                     </p>
                 </motion.div>
@@ -181,17 +191,17 @@ const ShopProducts = () => {
                     whileHover={{ y: -3 }}
                     style={{
                         padding: '20px',
-                        background: '#FFF',
+                        background: 'var(--surface)',
                         borderRadius: '24px',
-                        border: '1px solid #F0F0F0',
+                        border: '1px solid var(--border)',
                         position: 'relative',
                         overflow: 'hidden',
-                        boxShadow: '0 4px 15px rgba(0,0,0,0.02)'
+                        boxShadow: 'var(--shadow-premium)'
                     }}
                 >
-                    <div style={{ position: 'absolute', top: '-5px', right: '-5px', fontSize: '2.5rem', opacity: 0.05, fontWeight: '900', color: '#000' }}>🌿</div>
-                    <span style={{ fontSize: '0.6rem', fontWeight: '900', color: '#AAA', textTransform: 'uppercase', letterSpacing: '1.5px', display: 'block', marginBottom: '4px' }}>Ethics</span>
-                    <p style={{ fontSize: '0.9rem', fontWeight: '950', color: '#000', margin: 0, lineHeight: '1.1' }}>
+                    <div style={{ position: 'absolute', top: '-5px', right: '-5px', fontSize: '2.5rem', opacity: 0.05, fontWeight: '900', color: 'var(--text-main)' }}>🌿</div>
+                    <span style={{ fontSize: '0.6rem', fontWeight: '900', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', display: 'block', marginBottom: '4px' }}>Ethics</span>
+                    <p style={{ fontSize: '0.9rem', fontWeight: '950', color: 'var(--text-main)', margin: 0, lineHeight: '1.1' }}>
                         Clean & Organic
                     </p>
                 </motion.div>
@@ -200,16 +210,16 @@ const ShopProducts = () => {
             {/* Sorting - Minimal */}
             <div style={{ 
                 marginBottom: '32px',
-                background: '#FFF',
+                background: 'var(--surface)',
                 padding: '8px 16px',
                 borderRadius: '16px',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
-                border: '1px solid #F0F0F0',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.02)'
+                border: '1px solid var(--border)',
+                boxShadow: 'var(--shadow-premium)'
             }}>
-                <span style={{ fontSize: '0.65rem', fontWeight: '900', color: '#DDD', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Sort:</span>
+                <span style={{ fontSize: '0.65rem', fontWeight: '900', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Sort:</span>
                 <select 
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
@@ -220,7 +230,7 @@ const ShopProducts = () => {
                         fontSize: '0.85rem',
                         outline: 'none',
                         cursor: 'pointer',
-                        color: '#000'
+                        color: 'var(--text-main)'
                     }}
                 >
                     <option value="newest">Newest</option>
@@ -244,20 +254,20 @@ const ShopProducts = () => {
                         transition={{ delay: i * 0.05, type: 'spring', damping: 20 }}
                         whileHover={{ y: -8, boxShadow: '0 30px 60px rgba(0,0,0,0.06)' }}
                         style={{
-                            background: '#FFFFFF',
+                            background: 'var(--surface)',
                             borderRadius: '32px',
                             overflow: 'hidden',
-                            border: '1px solid rgba(0,0,0,0.03)',
+                            border: '1px solid var(--border)',
                             display: 'flex',
                             flexDirection: 'column',
-                            boxShadow: '0 20px 40px rgba(0,0,0,0.02)',
+                            boxShadow: 'var(--shadow-premium)',
                             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                             position: 'relative',
                             cursor: 'pointer'
                         }}
                         onClick={() => setSelectedProduct(product)}
                     >
-                        <div style={{ height: '180px', background: '#F9F9F9', position: 'relative', overflow: 'hidden' }}>
+                        <div style={{ height: '180px', background: 'var(--background)', position: 'relative', overflow: 'hidden' }}>
                             <img 
                                 src={product.image_url || '/assets/sparkle.jpeg'} 
                                 alt={product.name}
@@ -267,12 +277,13 @@ const ShopProducts = () => {
                                 position: 'absolute', 
                                 top: '12px', 
                                 right: '12px', 
-                                background: '#FFFFFF', 
+                                background: 'var(--surface)', 
                                 padding: '6px 12px', 
                                 borderRadius: '12px',
                                 fontWeight: '950',
                                 fontSize: '0.85rem',
-                                color: '#000',
+                                color: 'var(--text-main)',
+                                border: '1px solid var(--border)',
                                 boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
                             }}>
                                 ₹{product.price}
@@ -286,7 +297,7 @@ const ShopProducts = () => {
                                 <h3 style={{ 
                                     fontSize: '0.95rem', 
                                     fontWeight: '950', 
-                                    color: '#000', 
+                                    color: 'var(--text-main)', 
                                     margin: 0, 
                                     lineHeight: '1.2',
                                     flex: 1
@@ -294,12 +305,12 @@ const ShopProducts = () => {
                                     {product.name}
                                 </h3>
                                 <motion.button
-                                    whileHover={{ scale: 1.1, background: '#000', color: '#FFF' }}
+                                    whileHover={{ scale: 1.1, background: 'var(--text-main)', color: 'var(--background)' }}
                                     whileTap={{ scale: 0.9 }}
                                     onClick={() => addToCart(product)}
                                     style={{
-                                        background: '#F6F6F6',
-                                        border: 'none',
+                                        background: 'var(--background)',
+                                        border: '1px solid var(--border)',
                                         width: '36px',
                                         height: '36px',
                                         borderRadius: '12px',
@@ -308,7 +319,7 @@ const ShopProducts = () => {
                                         justifyContent: 'center',
                                         cursor: 'pointer',
                                         transition: 'all 0.2s ease',
-                                        color: '#000',
+                                        color: 'var(--text-main)',
                                         flexShrink: 0
                                     }}
                                 >
@@ -325,8 +336,8 @@ const ShopProducts = () => {
             {filteredAndSortedProducts.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '100px 20px' }}>
                     <div style={{ fontSize: '4rem', marginBottom: '24px' }}>✨</div>
-                    <h3 style={{ fontWeight: '950', fontSize: '1.5rem', marginBottom: '12px' }}>Coming Soon</h3>
-                    <p style={{ color: 'rgba(0,0,0,0.4)', fontWeight: '700' }}>We're curating the best products for you.</p>
+                    <h3 style={{ fontWeight: '950', fontSize: '1.5rem', marginBottom: '12px', color: 'var(--text-main)' }}>Coming Soon</h3>
+                    <p style={{ color: 'var(--text-muted)', fontWeight: '700' }}>We're curating the best products for you.</p>
                 </div>
             )}
             {/* Product Detail Modal - Standardized with Home.jsx */}
@@ -368,12 +379,13 @@ const ShopProducts = () => {
                                 position: 'relative',
                                 width: '100%',
                                 maxWidth: window.innerWidth < 768 ? '100%' : '900px',
-                                background: '#FFFFFF',
+                                background: 'var(--background)',
                                 borderRadius: window.innerWidth < 768 ? '32px 32px 0 0' : '32px',
                                 overflow: 'hidden',
                                 display: 'flex',
                                 flexDirection: window.innerWidth < 768 ? 'column' : 'row',
-                                boxShadow: '0 -10px 40px rgba(0,0,0,0.2)',
+                                boxShadow: 'var(--shadow-premium)',
+                                border: '1px solid var(--border)',
                                 maxHeight: window.innerWidth < 768 ? '90vh' : 'auto'
                             }}
                         >
@@ -386,8 +398,9 @@ const ShopProducts = () => {
                                     width: '40px',
                                     height: '40px',
                                     borderRadius: '50%',
-                                    background: 'rgba(0,0,0,0.05)',
-                                    border: 'none',
+                                    background: 'var(--surface)',
+                                    color: 'var(--text-main)',
+                                    border: '1px solid var(--border)',
                                     cursor: 'pointer',
                                     zIndex: 10,
                                     display: 'flex',
@@ -400,7 +413,7 @@ const ShopProducts = () => {
 
                             <div style={{ 
                                 flex: 1, 
-                                background: '#F9F9F9',
+                                background: 'var(--surface)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -425,13 +438,13 @@ const ShopProducts = () => {
                                 <div style={{ color: '#276EF1', fontWeight: '800', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '12px' }}>
                                     {selectedProduct.category_name || 'Premium Essential'}
                                 </div>
-                                <h2 style={{ fontSize: window.innerWidth < 768 ? '1.5rem' : '2rem', fontWeight: '900', color: '#000', marginBottom: '12px', lineHeight: '1.1' }}>
+                                <h2 style={{ fontSize: window.innerWidth < 768 ? '1.5rem' : '2rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '12px', lineHeight: '1.1' }}>
                                     {selectedProduct.name}
                                 </h2>
-                                <div style={{ fontSize: window.innerWidth < 768 ? '1.8rem' : '2.5rem', fontWeight: '900', color: '#000', marginBottom: '16px' }}>
+                                <div style={{ fontSize: window.innerWidth < 768 ? '1.8rem' : '2.5rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '16px' }}>
                                     ₹{selectedProduct.price}
                                 </div>
-                                <p style={{ color: '#666', fontSize: '0.95rem', lineHeight: '1.5', marginBottom: '24px', fontWeight: '500', opacity: 0.8 }}>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: '1.5', marginBottom: '24px', fontWeight: '500', opacity: 0.8 }}>
                                     {selectedProduct.description || 'Elevate your grooming routine with this professional-grade essential.'}
                                 </p>
 
@@ -445,9 +458,9 @@ const ShopProducts = () => {
                                         }}
                                         style={{
                                             flex: 1,
-                                            background: '#f5f5f5',
-                                            color: '#000',
-                                            border: 'none',
+                                            background: 'var(--surface)',
+                                            color: 'var(--text-main)',
+                                            border: '1px solid var(--border)',
                                             padding: '16px',
                                             borderRadius: '14px',
                                             fontWeight: '800',

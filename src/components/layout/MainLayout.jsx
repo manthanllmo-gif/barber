@@ -1,21 +1,35 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { ShopProvider, useShop } from '../../contexts/ShopContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import CartDrawer from '../cart/CartDrawer';
+import Footer from './Footer';
 
 const Header = ({ onOpenCart }) => {
   const { user, role, logout } = useAuth();
-  const { shops, currentShopId } = useShop();
+  const { currentShopId } = useShop();
   const { getCartCount, isCartOpen, setIsCartOpen } = useCart();
+  const { isDarkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const searchRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowResults(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const [scrolled, setScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('gs') || '');
   const [placeholder, setPlaceholder] = useState("");
   
   // Typing animation for placeholder
@@ -25,7 +39,7 @@ const Header = ({ onOpenCart }) => {
       "Search for 'Beard Trim'...",
       "Search for 'Premium Salon'...",
       "Search for 'Hair Styling'...",
-      "Search for 'Nearby Saloons'..."
+      "Search for 'Nearby Salons'..."
     ];
     
     let currentIdx = 0;
@@ -62,13 +76,30 @@ const Header = ({ onOpenCart }) => {
     return () => clearTimeout(initialTimeout);
   }, []);
 
-  const activeDashboardTab = searchParams.get('tab') || 'queue';
+  const [visible, setVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+  const activeDashboardTab = useSearchParams()[0].get('tab') || 'queue';
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Update scrolled state for style changes
+      setScrolled(currentScrollY > 20);
+      
+      // Hide header on scroll down, show on scroll up
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setVisible(false);
+      } else {
+        setVisible(true);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [lastScrollY]);
 
   const isOwner = role === 'shop_owner';
   const isAdmin = role === 'super_admin';
@@ -76,39 +107,119 @@ const Header = ({ onOpenCart }) => {
   const isDashboard = location.pathname === '/dashboard';
   const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
 
+  const { shops = [], products = [], staff = [] } = useShop();
+  const [showResults, setShowResults] = useState(false);
+
+  // Reactive search results based on data and query
+  const searchResults = useMemo(() => {
+    if (!searchQuery || searchQuery.trim().length < 2) {
+      return { shops: [], products: [], staff: [], services: [] };
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+    
+    // 1. Filter Shops
+    const filteredShops = shops.filter(s => 
+      (s.name?.toLowerCase().includes(query)) || 
+      (s.address?.toLowerCase().includes(query))
+    ).slice(0, 5);
+
+    // 2. Filter All Services (Scanning all shops)
+    const allServicesMap = new Map();
+    shops.forEach(shop => {
+      shop.services?.forEach(service => {
+        if (service.name?.toLowerCase().includes(query)) {
+          const name = service.name.trim();
+          if (!allServicesMap.has(name)) {
+            allServicesMap.set(name, {
+              ...service,
+              shop_name: shop.name,
+              shop_id: shop.id
+            });
+          }
+        }
+      });
+    });
+    const filteredServices = Array.from(allServicesMap.values()).slice(0, 5);
+
+    // 3. Filter Products
+    const filteredProducts = products.filter(p => 
+      (p.name?.toLowerCase().includes(query)) || 
+      (p.category_name?.toLowerCase().includes(query))
+    ).slice(0, 5);
+
+    // 4. Filter Staff
+    const filteredStaff = staff.filter(s => {
+      const nameMatch = s.name?.toLowerCase().includes(query);
+      const skillsMatch = Array.isArray(s.skills) 
+        ? s.skills.some(skill => typeof skill === 'string' && skill.toLowerCase().includes(query))
+        : (typeof s.skills === 'string' && s.skills.toLowerCase().includes(query));
+      return nameMatch || skillsMatch;
+    }).slice(0, 5);
+
+    return {
+      shops: filteredShops,
+      products: filteredProducts,
+      staff: filteredStaff,
+      services: filteredServices
+    };
+  }, [searchQuery, shops, products, staff]);
+
+  // Handle showing results when query is present (e.g. on load or typing)
+  useEffect(() => {
+    if (searchQuery.trim().length >= 2) {
+      setShowResults(true);
+    } else {
+      setShowResults(false);
+    }
+  }, [searchQuery]);
+
+  // Debounced URL update to keep UI smooth
+  useEffect(() => {
+    // Only update URL params on main list pages
+    const isListPage = location.pathname === '/' || location.pathname === '/salons';
+    if (!isListPage) return;
+
+    const timer = setTimeout(() => {
+      const currentGs = searchParams.get('gs') || '';
+      if (searchQuery === currentGs) return;
+
+      setSearchParams(prev => {
+        if (searchQuery) prev.set('gs', searchQuery);
+        else prev.delete('gs');
+        return prev;
+      }, { replace: true });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery, location.pathname, searchParams]);
+
   const handleSearch = (e) => {
-    const val = e.target.value;
-    setSearchQuery(val);
-    setSearchParams(prev => {
-      if (val) prev.set('q', val);
-      else prev.delete('q');
-      return prev;
-    }, { replace: true });
+    setSearchQuery(e.target.value);
   };
 
-  const isLightHeader = isHome && !scrolled;
+  const isLightHeader = false;
 
   const headerStyle = {
     position: 'fixed',
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 1000,
-    padding: scrolled ? '10px 5%' : '18px 5%',
+    zIndex: 3000,
+    padding: '0 5%',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
-    background: scrolled ? 'rgba(0, 0, 0, 0.85)' : 'rgba(0, 0, 0, 0.4)',
-    backdropFilter: 'blur(30px) saturate(180%)',
-    WebkitBackdropFilter: 'blur(30px) saturate(180%)',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-    boxShadow: scrolled ? '0 20px 40px rgba(0, 0, 0, 0.4)' : 'none',
-    borderRadius: '0 0 32px 32px'
+    transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+    background: 'var(--nav-bg)',
+    backdropFilter: 'blur(20px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+    borderBottom: '1px solid var(--nav-border)',
+    boxShadow: isDarkMode ? '0 10px 30px rgba(0, 0, 0, 0.5)' : '0 10px 30px rgba(0, 0, 0, 0.05)',
+    transform: visible ? 'translateY(0)' : 'translateY(-100%)',
   };
 
   const linkStyle = {
-    color: '#FFFFFF',
+    color: 'var(--nav-text)',
     textDecoration: 'none',
     fontSize: '0.85rem',
     fontWeight: '700',
@@ -134,15 +245,15 @@ const Header = ({ onOpenCart }) => {
 
   const buttonStyle = {
     padding: '10px 24px',
-    background: '#FFFFFF',
-    color: '#000000',
+    background: isDarkMode ? '#FFFFFF' : '#000000',
+    color: isDarkMode ? '#000000' : '#FFFFFF',
     border: 'none',
     borderRadius: '50px',
     fontWeight: '700',
     fontSize: '0.9rem',
     cursor: 'pointer',
     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+    boxShadow: isDarkMode ? '0 4px 12px rgba(0,0,0,0.5)' : '0 4px 12px rgba(0,0,0,0.2)'
   };
 
   const dashboardTabs = [
@@ -162,7 +273,7 @@ const Header = ({ onOpenCart }) => {
           style={{ ...mobileLinkStyle, background: location.pathname === '/' ? 'rgba(0,0,0,0.05)' : 'transparent' }} 
           onClick={() => setIsMenuOpen(false)}
         >
-          Public Home
+          Home
         </Link>
       )}
       
@@ -220,6 +331,15 @@ const Header = ({ onOpenCart }) => {
         <>
           <a href="#shops" style={mobileLinkStyle} onClick={() => setIsMenuOpen(false)}>Locations</a>
           <Link to="/shop" style={mobileLinkStyle} onClick={() => setIsMenuOpen(false)}>Shop</Link>
+          <a 
+            href={`https://wa.me/919981284141?text=${encodeURIComponent("Hello! I'm interested in onboarding my shop with TrimTimes. Please provide more details.")}`} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            style={{ ...mobileLinkStyle, color: '#276EF1' }} 
+            onClick={() => setIsMenuOpen(false)}
+          >
+            Join as Owner
+          </a>
         </>
       )}
     </div>
@@ -227,43 +347,68 @@ const Header = ({ onOpenCart }) => {
 
   return (
     <>
-      <header style={{
-        ...headerStyle,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '20px',
-        height: scrolled ? '64px' : '80px',
-        zIndex: 2000
-      }}>
+      <motion.header 
+        initial={false}
+        animate={{ 
+          y: visible ? 0 : -100,
+          opacity: visible ? 1 : 0
+        }}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        style={{
+          ...headerStyle,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '20px',
+          height: '70px',
+        }}
+      >
         {/* Top Row: Logo & Actions */}
-          <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+          <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
             <img 
-              src="/assets/header_logo.png" 
-              alt="TrimTime" 
-              style={{ height: scrolled ? '28px' : '36px', transition: 'all 0.4s ease' }} 
+              src={isDarkMode ? "/assets/logo_black.png" : "/assets/logo_white.png"} 
+              alt="TrimTimes" 
+              style={{ 
+                height: '36px'
+              }} 
             />
-            <div style={{ 
+            <div className="logo-text" style={{ 
               fontSize: '1.4rem', 
               fontWeight: '600', 
-              color: '#FFFFFF', 
+              color: 'var(--nav-text)', 
               fontFamily: "'Bodoni Moda', serif",
-              letterSpacing: '-0.5px',
-              display: scrolled ? 'none' : 'block'
+              letterSpacing: '-0.5px'
             }}>
               TrimTimes<span style={{ color: '#276EF1' }}>.</span>
             </div>
           </Link>
 
           {/* Premium Integrated Search Bar */}
-          <div className="header-search-container" style={{ 
+          <div ref={searchRef} className="header-search-container" style={{ 
             flex: 1,
-            maxWidth: '440px', 
+            maxWidth: '440px',
             position: 'relative',
             display: 'flex',
             alignItems: 'center',
             margin: '0 24px',
-            transition: 'all 0.3s ease'
+            transition: 'all 0.3s ease',
+            zIndex: 10001
           }}>
+            <style>{`
+              @media (max-width: 768px) {
+                .header-search-container {
+                  max-width: 180px !important;
+                }
+                .header-search-container input {
+                  padding: 8px 12px 8px 36px !important;
+                  font-size: 12px !important;
+                }
+                .search-results-dropdown {
+                  width: 300px !important;
+                  right: -60px !important;
+                  left: auto !important;
+                }
+              }
+            `}</style>
             <div style={{ 
               position: 'absolute', 
               left: '16px', 
@@ -283,36 +428,238 @@ const Header = ({ onOpenCart }) => {
               placeholder={placeholder || "Search..."}
               value={searchQuery}
               onChange={handleSearch}
+              onFocus={() => searchQuery.length > 1 && setShowResults(true)}
               style={{
                 width: '100%',
                 padding: '12px 20px 12px 44px',
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.15)',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
                 borderRadius: '12px',
-                color: '#FFFFFF',
-                fontSize: '0.85rem',
-                fontWeight: '600',
+                color: 'var(--text-main)',
+                fontSize: '14px',
                 outline: 'none',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                letterSpacing: '0.2px'
-              }}
-              onFocus={(e) => {
-                e.target.style.background = 'rgba(255,255,255,0.07)';
-                e.target.style.borderColor = 'rgba(255,255,255,0.4)';
-                e.target.style.boxShadow = '0 0 0 4px rgba(255,255,255,0.05)';
-              }}
-              onBlur={(e) => {
-                e.target.style.background = 'rgba(255,255,255,0.03)';
-                e.target.style.borderColor = 'rgba(255,255,255,0.15)';
-                e.target.style.boxShadow = 'none';
+                transition: 'all 0.2s ease',
               }}
             />
+            {searchQuery && (
+              <button 
+                onClick={() => { setSearchQuery(''); setShowResults(false); }}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  background: 'none',
+                  border: 'none',
+                  color: 'rgba(255,255,255,0.4)',
+                  cursor: 'pointer',
+                  padding: '4px'
+                }}
+              >
+                ✕
+              </button>
+            )}
+
+            <AnimatePresence>
+              {showResults && (
+                <motion.div
+                  key="global-search-results"
+                  className="search-results-dropdown"
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 12px)',
+                    left: 0,
+                    right: 0,
+                    background: 'rgba(20, 20, 20, 0.7)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '20px',
+                    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)',
+                    padding: '8px',
+                    zIndex: 10000,
+                    maxHeight: '400px',
+                    overflowY: 'auto',
+                    backdropFilter: 'blur(30px)',
+                    WebkitBackdropFilter: 'blur(30px)',
+                    scrollbarWidth: 'none'
+                  }}
+                >
+
+                  {/* Salons */}
+                  {searchResults.shops.length > 0 && (
+                    <div style={{ marginBottom: '20px' }}>
+                      <p style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', fontWeight: '800', textTransform: 'uppercase', padding: '0 12px 10px', letterSpacing: '2px' }}>Salons</p>
+                      {searchResults.shops.map(shop => (
+                        <Link 
+                          key={shop.id}
+                          to={`/queue?shopId=${shop.id}`}
+                          onClick={() => {
+                            setShowResults(false);
+                            setSearchQuery('');
+                          }}
+                          style={{
+                            padding: '10px 12px',
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            transition: 'all 0.2s ease',
+                            textDecoration: 'none'
+                          }}
+                          className="search-result-item"
+                        >
+                          <div style={{ width: '32px', height: '32px', borderRadius: '8px', overflow: 'hidden', background: '#333' }}>
+                            <img src={shop.image_url || '/assets/salman.jpeg'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          </div>
+                          <div>
+                            <div style={{ color: '#FFF', fontSize: '0.85rem', fontWeight: '700' }}>{shop.name}</div>
+                            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>{shop.address}</div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Staff/Barbers */}
+                  {searchResults.staff.length > 0 && (
+                    <div style={{ marginBottom: '20px' }}>
+                      <p style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', fontWeight: '800', textTransform: 'uppercase', padding: '8px 12px', letterSpacing: '2px' }}>Barbers</p>
+                      {searchResults.staff.map(barber => (
+                        <Link 
+                          key={barber.id}
+                          to={`/barbers/${barber.id}`}
+                          onClick={() => {
+                            setShowResults(false);
+                            setSearchQuery('');
+                          }}
+                          style={{
+                            padding: '10px 12px',
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            transition: 'all 0.2s ease',
+                            textDecoration: 'none'
+                          }}
+                          className="search-result-item"
+                        >
+                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', overflow: 'hidden', background: '#333' }}>
+                            <img src={barber.image_url || '/assets/sunny.jpg'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          </div>
+                          <div>
+                            <div style={{ color: '#FFF', fontSize: '0.85rem', fontWeight: '700' }}>{barber.name}</div>
+                            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>
+                              {barber.shops?.name} • {Array.isArray(barber.skills) ? barber.skills.join(', ') : barber.skills}
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Services */}
+                  {searchResults.services.length > 0 && (
+                    <div style={{ marginBottom: '20px' }}>
+                      <p style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', fontWeight: '800', textTransform: 'uppercase', padding: '8px 12px', letterSpacing: '2px' }}>Services</p>
+                      {searchResults.services.map((service, index) => (
+                        <Link 
+                          key={index}
+                          className="search-result-item"
+                          to={`/salons?service=${encodeURIComponent(service.name)}`}
+                          onClick={() => {
+                            setShowResults(false);
+                            setSearchQuery('');
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            borderRadius: '10px',
+                            transition: 'all 0.2s ease',
+                            textDecoration: 'none'
+                          }}
+                        >
+                          <div style={{ 
+                            width: '36px', 
+                            height: '36px', 
+                            borderRadius: '8px', 
+                            background: 'rgba(255,255,255,0.05)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            overflow: 'hidden'
+                          }}>
+                            {service.image_url ? (
+                              <img src={service.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <span style={{ fontSize: '1.1rem' }}>✂️</span>
+                            )}
+                          </div>
+                          <div>
+                            <div style={{ color: '#FFF', fontSize: '0.85rem', fontWeight: '700' }}>{service.name}</div>
+                            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>
+                              {service.shop_name ? `Available at ${service.shop_name}` : 'Professional Service'}
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Products */}
+                  {searchResults.products.length > 0 && (
+                    <div style={{ marginBottom: '10px' }}>
+                      <p style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', fontWeight: '800', textTransform: 'uppercase', padding: '8px 12px', letterSpacing: '2px' }}>Products</p>
+                      {searchResults.products.map(product => (
+                        <Link 
+                          key={product.id}
+                          to={`/shop?productId=${product.id}`}
+                          onClick={() => {
+                            setShowResults(false);
+                            setSearchQuery('');
+                          }}
+                          style={{
+                            padding: '10px 12px',
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            transition: 'all 0.2s ease',
+                            textDecoration: 'none'
+                          }}
+                          className="search-result-item"
+                        >
+                          <div style={{ width: '32px', height: '32px', borderRadius: '8px', overflow: 'hidden', background: '#333' }}>
+                            <img src={product.image_url || '/assets/sparkle.jpeg'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          </div>
+                          <div>
+                            <div style={{ color: '#FFF', fontSize: '0.85rem', fontWeight: '700' }}>{product.name}</div>
+                            <div style={{ color: '#276EF1', fontSize: '0.7rem', fontWeight: '800' }}>₹{product.price} • {product.category_name}</div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+
+                  {Object.values(searchResults).every(arr => arr.length === 0) && (
+                    <div style={{ padding: '24px 12px', textAlign: 'center' }}>
+                      <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', fontWeight: '600' }}>No matches found</div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             {/* Desktop Navigation */}
             <nav className="desktop-nav" style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-              {!isOwner && !isAdmin && <Link to="/" style={linkStyle}>Public Home</Link>}
+              {!isOwner && !isAdmin && <Link to="/" style={linkStyle}>Home</Link>}
               {user && !isOwner && !isAdmin && <Link to="/profile" style={linkStyle}>My Tokens</Link>}
               {(isOwner || isAdmin) && (
                 <Link to="/dashboard" style={{ ...linkStyle, color: 'var(--primary)', fontWeight: '700', opacity: 1 }}>
@@ -324,9 +671,9 @@ const Header = ({ onOpenCart }) => {
                   <button 
                     onClick={onOpenCart}
                     style={{
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      color: '#FFFFFF',
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text-main)',
                       width: '38px',
                       height: '38px',
                       borderRadius: '50px',
@@ -364,6 +711,42 @@ const Header = ({ onOpenCart }) => {
                 </button>
               )}
 
+              <button 
+                onClick={toggleTheme}
+                style={{
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-main)',
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '50px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+                title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              >
+                {isDarkMode ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                  </svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                  </svg>
+                )}
+              </button>
+
               {!user ? (
                 <button onClick={() => navigate('/login')} style={{ ...buttonStyle, padding: '8px 20px', fontSize: '0.85rem' }}>Login</button>
               ) : (
@@ -382,9 +765,9 @@ const Header = ({ onOpenCart }) => {
                 <button 
                   onClick={() => setIsCartOpen(true)}
                   style={{
-                    background: 'rgba(255,255,255,0.1)',
+                    background: 'var(--surface)',
                     border: 'none',
-                    color: '#FFFFFF',
+                    color: 'var(--text-main)',
                     width: '38px',
                     height: '38px',
                     borderRadius: '50px',
@@ -422,12 +805,45 @@ const Header = ({ onOpenCart }) => {
               )}
 
               <button 
+                onClick={toggleTheme}
+                style={{
+                  background: 'var(--surface)',
+                  border: 'none',
+                  color: 'var(--text-main)',
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '50px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {isDarkMode ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                  </svg>
+                )}
+              </button>
+
+              <button 
                 className="mobile-menu-toggle-btn"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 style={{ 
-                  background: 'rgba(255,255,255,0.1)', 
+                  background: 'var(--surface)', 
                   border: 'none', 
-                  color: '#FFFFFF', 
+                  color: 'var(--text-main)', 
                   width: '38px',
                   height: '38px',
                   borderRadius: '50px',
@@ -441,7 +857,7 @@ const Header = ({ onOpenCart }) => {
             </div>
           </div>
 
-      </header>
+      </motion.header>
 
       {/* Mobile Drawer */}
       <AnimatePresence>
@@ -570,15 +986,62 @@ const Header = ({ onOpenCart }) => {
             display: flex !important;
             align-items: center;
           }
+          .logo-text {
+            display: none !important;
+          }
           .header-search-container {
-            margin: 0 10px !important;
+            margin: 0 5px !important;
             max-width: none !important;
+          }
+           .search-results-dropdown {
+            position: fixed !important;
+            top: 60px !important;
+            left: 15px !important;
+            right: 15px !important;
+            width: auto !important;
+            max-height: 50vh !important;
+            border-radius: 16px !important;
+            padding: 6px !important;
+            background: rgba(10, 10, 10, 0.85) !important;
+            backdrop-filter: blur(25px) !important;
+            -webkit-backdrop-filter: blur(25px) !important;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4) !important;
+            z-index: 10001 !important;
+          }
+          .search-results-dropdown::-webkit-scrollbar {
+            display: none;
+          }
+          .search-result-item {
+            padding: 6px 10px !important;
+            gap: 10px !important;
+          }
+          .search-result-item div div:first-child {
+            font-size: 0.8rem !important;
+          }
+          .search-result-item div div:last-child {
+            font-size: 0.65rem !important;
+          }
+          .search-result-item img, .search-result-item div:first-child {
+            width: 28px !important;
+            height: 28px !important;
+          }
+          .search-results-dropdown p {
+            font-size: 0.5rem !important;
+            padding: 4px 10px !important;
+            margin-bottom: 4px !important;
+            letter-spacing: 1px !important;
+          }
+          .search-result-item:hover {
+            background: rgba(255, 255, 255, 0.05) !important;
           }
           .bottom-nav-container {
             display: flex !important;
           }
           .main-content-mobile {
-            padding-bottom: ${isAuthPage ? '0' : '80px'} !important;
+            padding-bottom: ${isAuthPage ? '0' : '70px'} !important;
+          }
+          footer {
+            padding-bottom: 90px !important;
           }
         }
       `}</style>
@@ -594,7 +1057,7 @@ const NavIcons = {
       <polyline points="9 22 9 12 15 12 15 22" />
     </svg>
   ),
-  Explore: ({ active }) => (
+  Salons: ({ active }) => (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'all 0.3s' }}>
       <circle cx="12" cy="12" r="10" />
       <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
@@ -628,26 +1091,29 @@ const BottomNav = ({ onShowAuth }) => {
 
   const navItems = [
     { id: 'home', label: 'Home', path: '/', Icon: NavIcons.Home },
-    { id: 'explore', label: 'Explore', path: '/saloons', Icon: NavIcons.Explore },
+    { id: 'salons', label: 'Salons', path: '/salons', Icon: NavIcons.Salons },
     { id: 'products', label: 'Shop', path: '/shop', Icon: NavIcons.Shop },
     { id: 'profile', label: 'Tokens', path: '/profile', Icon: NavIcons.Tokens }
   ];
 
   const containerStyle = {
     position: 'fixed',
-    bottom: '0',
-    left: '0',
-    right: '0',
-    background: 'rgba(0, 0, 0, 0.85)',
-    backdropFilter: 'blur(30px) saturate(180%)',
-    WebkitBackdropFilter: 'blur(30px) saturate(180%)',
-    borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    width: '100%',
+    maxWidth: 'none',
+    background: 'var(--nav-bg)',
+    backdropFilter: 'blur(20px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+    borderTop: '1px solid var(--nav-border)',
     display: 'none', // Shown via media query
     justifyContent: 'space-around',
-    padding: '12px 0 calc(12px + env(safe-area-inset-bottom))',
+    padding: '12px 12px calc(12px + env(safe-area-inset-bottom))',
     zIndex: 2000,
-    boxShadow: '0 -20px 40px rgba(0, 0, 0, 0.4)',
-    borderRadius: '32px 32px 0 0'
+    boxShadow: '0 -10px 30px rgba(0, 0, 0, 0.5)',
+    borderTopLeftRadius: '24px',
+    borderTopRightRadius: '24px'
   };
 
   const itemStyle = (isActive) => ({
@@ -656,7 +1122,7 @@ const BottomNav = ({ onShowAuth }) => {
     alignItems: 'center',
     justifyContent: 'center',
     textDecoration: 'none',
-    color: isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.4)',
+    color: isActive ? 'var(--primary)' : 'var(--text-muted)',
     transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
     flex: 1,
     gap: '6px',
@@ -710,14 +1176,14 @@ const BottomNav = ({ onShowAuth }) => {
                 layoutId="bottomNavIndicator"
                 style={{
                   position: 'absolute',
-                  top: '-12px',
+                  bottom: '-8px',
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  width: '20px',
+                  width: '16px',
                   height: '2px',
-                  background: '#FFFFFF',
+                  background: 'var(--primary)',
                   borderRadius: '10px',
-                  boxShadow: '0 0 15px rgba(255, 255, 255, 0.5)'
+                  boxShadow: '0 0 10px var(--primary-glow)'
                 }}
               />
             )}
@@ -766,11 +1232,11 @@ const AuthPromptModal = ({ isOpen, onClose }) => {
               style={{
                 width: '100%',
                 maxWidth: '400px',
-                background: '#161621',
+                background: 'var(--surface)',
                 borderRadius: '32px',
                 padding: '40px',
                 textAlign: 'center',
-                border: '1px solid rgba(255,255,255,0.08)',
+                border: '1px solid var(--border)',
                 boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
                 pointerEvents: 'auto',
                 position: 'relative'
@@ -782,9 +1248,9 @@ const AuthPromptModal = ({ isOpen, onClose }) => {
                   position: 'absolute',
                   top: '20px',
                   right: '20px',
-                  background: 'rgba(255,255,255,0.05)',
+                  background: 'var(--surface-elevated)',
                   border: 'none',
-                  color: 'rgba(255,255,255,0.5)',
+                  color: 'var(--text-muted)',
                   fontSize: '20px',
                   width: '36px',
                   height: '36px',
@@ -797,19 +1263,19 @@ const AuthPromptModal = ({ isOpen, onClose }) => {
                   zIndex: 1
                 }}
                 onMouseOver={(e) => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                  e.currentTarget.style.color = '#fff';
+                  e.currentTarget.style.background = 'var(--border)';
+                  e.currentTarget.style.color = 'var(--text-main)';
                 }}
                 onMouseOut={(e) => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  e.currentTarget.style.color = 'rgba(255,255,255,0.5)';
+                  e.currentTarget.style.background = 'var(--surface-elevated)';
+                  e.currentTarget.style.color = 'var(--text-muted)';
                 }}
               >
                 ×
               </button>
               <div style={{ fontSize: '3rem', marginBottom: '20px' }}>🎫</div>
-              <h2 style={{ color: 'white', fontSize: '1.5rem', fontWeight: '800', marginBottom: '12px' }}>Your Tokens</h2>
-              <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: '32px', lineHeight: '1.6' }}>
+              <h2 style={{ color: 'var(--text-main)', fontSize: '1.5rem', fontWeight: '800', marginBottom: '12px' }}>Your Tokens</h2>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '32px', lineHeight: '1.6' }}>
                 Please login or create an account to view your active tokens and queue status.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -835,9 +1301,9 @@ const AuthPromptModal = ({ isOpen, onClose }) => {
                   onClick={() => { onClose(); navigate('/signup'); }}
                   style={{
                     padding: '16px',
-                    background: 'rgba(255,255,255,0.05)',
-                    color: 'white',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'var(--surface-elevated)',
+                    color: 'var(--text-main)',
+                    border: '1px solid var(--border)',
                     borderRadius: '16px',
                     fontWeight: '600',
                     fontSize: '1rem',
@@ -852,7 +1318,7 @@ const AuthPromptModal = ({ isOpen, onClose }) => {
                     padding: '12px',
                     background: 'none',
                     border: 'none',
-                    color: 'rgba(255,255,255,0.4)',
+                    color: 'var(--text-muted)',
                     fontSize: '0.9rem',
                     cursor: 'pointer',
                     marginTop: '10px'
@@ -875,17 +1341,19 @@ const MainLayout = ({ children }) => {
   const { role } = useAuth();
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
   const location = useLocation();
-  const isDisplayPage = location.pathname.startsWith('/display') || location.pathname === '/pitch';
+  const isDisplayPage = location.pathname.startsWith('/display');
   const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
-  const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/app');
+  const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/app') || location.pathname.startsWith('/admin');
   const isOwner = role === 'shop_owner' || role === 'owner';
-  const shouldHideHeader = isDashboard;
-  const isFullPage = location.pathname === '/' || location.pathname === '/queue' || location.pathname === '/profile' || location.pathname === '/saloons' || location.pathname === '/shop' || isAuthPage || isDashboard;
+  const isAdmin = role === 'super_admin';
+  const shouldHideHeader = isDashboard || isAdmin;
+  const isFullPage = location.pathname === '/' || location.pathname === '/queue' || location.pathname === '/profile' || location.pathname === '/salons' || location.pathname === '/shop' || location.pathname === '/pitch' || isAuthPage || isDashboard;
+  const showFooter = !isDashboard && !isDisplayPage && !isAdmin && !isAuthPage;
 
   if (isDisplayPage) {
     return (
       <ShopProvider>
-        <div style={{ height: '100vh', width: '100vw' }}>
+        <div style={{ height: '100vh', width: '100%', overflow: 'hidden' }}>
           {children}
         </div>
       </ShopProvider>
@@ -896,9 +1364,12 @@ const MainLayout = ({ children }) => {
     <ShopProvider>
       <div className="main-layout" style={{ 
         minHeight: '100vh', 
+        width: '100%',
         display: 'flex', 
         flexDirection: 'column',
-        background: 'var(--background)'
+        background: 'var(--background)',
+        overflowX: 'hidden',
+        position: 'relative'
       }}>
         {!shouldHideHeader && !isDisplayPage && <Header onOpenCart={() => setIsCartOpen(true)} />}
         <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
@@ -927,6 +1398,7 @@ const MainLayout = ({ children }) => {
           )}
         </main>
         <BottomNav onShowAuth={() => setIsAuthPromptOpen(true)} />
+        {showFooter && <Footer />}
       </div>
     </ShopProvider>
   );

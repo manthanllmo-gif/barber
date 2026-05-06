@@ -137,3 +137,103 @@ export const toggleProductVisibility = async (id, currentStatus) => {
         throw err;
     }
 };
+
+// Shops Management
+export const fetchShops = async () => {
+    try {
+        const { data, error } = await supabase
+            .from('shops')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data || [];
+    } catch (err) {
+        console.error("Error fetching shops:", err.message);
+        return [];
+    }
+};
+
+export const createShopAndOwner = async (form) => {
+    const { shopName, shopAddress, shopPhone, ownerPhone, password, image_url, latitude, longitude } = form;
+    
+    try {
+        // 1. Create Auth User
+        const email = `${ownerPhone}@shopowner.app`;
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
+                    name: shopName,
+                    phone: ownerPhone,
+                    role: 'shop_owner'
+                }
+            }
+        });
+
+        if (authError) throw authError;
+        if (!authData.user) throw new Error("Failed to create auth user");
+
+        // 2. Create Shop
+        const { data: shopData, error: shopError } = await supabase
+            .from('shops')
+            .insert([{
+                name: shopName,
+                address: shopAddress,
+                phone: shopPhone,
+                image_url,
+                latitude: latitude ? parseFloat(latitude) : null,
+                longitude: longitude ? parseFloat(longitude) : null
+            }])
+            .select()
+            .single();
+
+        if (shopError) throw shopError;
+
+        // 3. Update User Profile in users table
+        const { error: userError } = await supabase
+            .from('users')
+            .insert([{
+                id: authData.user.id,
+                name: shopName,
+                phone: ownerPhone,
+                role: 'shop_owner',
+                shop_id: shopData.id
+            }]);
+
+        if (userError) throw userError;
+
+        return { shop: shopData, user: authData.user };
+    } catch (err) {
+        console.error("Error creating shop and owner:", err.message);
+        throw err;
+    }
+};
+
+export const updateShopAndOwner = async (shopId, form) => {
+    const { shopName, shopAddress, shopPhone, image_url, latitude, longitude } = form;
+    
+    try {
+        const { data, error } = await supabase
+            .from('shops')
+            .update({
+                name: shopName,
+                address: shopAddress,
+                phone: shopPhone,
+                image_url,
+                latitude: latitude ? parseFloat(latitude) : null,
+                longitude: longitude ? parseFloat(longitude) : null,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', shopId)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    } catch (err) {
+        console.error("Error updating shop:", err.message);
+        throw err;
+    }
+};

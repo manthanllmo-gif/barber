@@ -14,9 +14,42 @@ const Queue = () => {
     const { user, signup, login } = useAuth();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    
+    // Check URL first to prevent premature redirect
+    const urlShopId = searchParams.get('shopId');
+    const effectiveShopId = urlShopId || currentShopId;
 
-    if (!currentShopId) {
-        return <Navigate to="/" />;
+    // Use an effect for redirection instead of a guard clause in render
+    // This gives the ShopContext time to update from the URL
+    useEffect(() => {
+        if (!effectiveShopId && shops.length > 0) {
+            // Only redirect if we have no shop ID and shops have finished loading
+            const timer = setTimeout(() => {
+                if (!searchParams.get('shopId') && !currentShopId) {
+                    navigate('/');
+                }
+            }, 1000); // Give it a full second to settle
+            return () => clearTimeout(timer);
+        }
+    }, [effectiveShopId, shops, currentShopId, searchParams, navigate]);
+
+    // Don't render full page if we definitely don't have a shop ID yet
+    if (!effectiveShopId && shops.length === 0) {
+        return (
+            <div style={{ 
+                minHeight: '100vh', 
+                background: 'var(--background)', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                color: 'var(--text-muted)'
+            }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div className="loader" style={{ marginBottom: '20px', borderTopColor: 'var(--primary)' }}></div>
+                    <p style={{ fontSize: '0.9rem', fontWeight: '500', letterSpacing: '0.05em' }}>PREPARING YOUR QUEUE...</p>
+                </div>
+            </div>
+        );
     }
 
     const shop = shops.find(s => s.id === currentShopId) || {};
@@ -44,6 +77,7 @@ const Queue = () => {
     useEffect(() => {
         const urlShopId = searchParams.get('shopId');
         const urlStaffId = searchParams.get('staffId');
+        const urlService = searchParams.get('service');
 
         if (urlShopId && urlShopId !== currentShopId) {
             setCurrentShopId(urlShopId);
@@ -52,6 +86,9 @@ const Queue = () => {
         if (user) {
             setCustomerName(user.user_metadata?.name || '');
             setCustomerPhone(user.user_metadata?.phone || '');
+        } else {
+            setCustomerName('');
+            setCustomerPhone('');
         }
 
         const fetchInitialData = async () => {
@@ -71,7 +108,17 @@ const Queue = () => {
                 .select('*')
                 .eq('shop_id', activeShopId)
                 .neq('is_active', false);
-            if (serviceData) setServices(serviceData);
+            
+            if (serviceData) {
+                setServices(serviceData);
+                if (urlService) {
+                    const matched = serviceData.find(s => s.name === urlService);
+                    if (matched) {
+                        setSelectedServiceIds([matched.id]);
+                        setBookingStage('details'); // Move to details if service is pre-selected
+                    }
+                }
+            }
 
             const { data: staffData } = await supabase
                 .from('staff')
@@ -307,15 +354,15 @@ const Queue = () => {
         }
     };
 
-    // UI Styles (Light Mode Premium)
     const S = {
         container: {
             minHeight: '100vh',
-            background: '#FFFFFF',
-            color: '#000000',
+            background: 'var(--background)',
+            color: 'var(--text-main)',
             paddingTop: '80px',
             marginTop: '0px',
-            paddingBottom: '120px'
+            paddingBottom: '120px',
+            transition: 'all 0.4s ease'
         },
         hero: {
             height: '180px',
@@ -337,19 +384,20 @@ const Queue = () => {
             alignItems: 'center',
             gap: '4px',
             padding: '5px 10px',
-            background: '#FFFFFF',
+            background: 'var(--background)',
             borderRadius: '10px',
             fontSize: '0.65rem',
             fontWeight: '900',
-            color: '#000',
+            color: 'var(--text-main)',
             marginBottom: '8px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-            width: 'fit-content'
+            boxShadow: 'var(--shadow-premium)',
+            width: 'fit-content',
+            border: '1px solid var(--border)'
         },
         title: {
             fontSize: '1.25rem',
             fontWeight: '950',
-            color: '#000',
+            color: 'var(--text-main)',
             margin: '0 0 6px 0',
             letterSpacing: '-0.5px',
             lineHeight: 1
@@ -364,7 +412,7 @@ const Queue = () => {
             display: 'flex',
             alignItems: 'center',
             gap: '4px',
-            color: 'rgba(0,0,0,0.5)',
+            color: 'var(--text-muted)',
             fontSize: '0.75rem',
             fontWeight: '800'
         },
@@ -374,8 +422,8 @@ const Queue = () => {
             margin: '0 auto'
         },
         card: {
-            background: '#FFFFFF',
-            border: '1px solid #F5F5F5',
+            background: 'var(--card-bg)',
+            border: '1px solid var(--border)',
             borderRadius: '24px',
             padding: '20px',
             boxShadow: '0 8px 30px rgba(0,0,0,0.02)',
@@ -383,15 +431,15 @@ const Queue = () => {
         },
         featureTag: {
             padding: '8px 16px',
-            background: '#F8F8F8',
-            border: '1px solid #F0F0F0',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
             borderRadius: '12px',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
             fontSize: '0.75rem',
             fontWeight: '800',
-            color: '#000'
+            color: 'var(--text-main)'
         },
         grid: {
             display: 'grid',
@@ -404,10 +452,10 @@ const Queue = () => {
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '10px 14px',
-            background: '#F8F8F8',
+            background: 'var(--surface)',
             borderRadius: '12px',
             cursor: 'pointer',
-            border: '1px solid #F0F0F0',
+            border: '1px solid var(--border)',
             transition: 'all 0.3s ease',
             marginBottom: '8px'
         }
@@ -435,8 +483,8 @@ const Queue = () => {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
                         {facilities.slice(0, 4).map((f, i) => (
                             <div key={i} style={{ 
-                                background: '#F9F9F9', 
-                                border: '1px solid #F0F0F0', 
+                                background: 'var(--surface)', 
+                                border: '1px solid var(--border)', 
                                 borderRadius: '14px', 
                                 padding: '8px 12px', 
                                 display: 'flex', 
@@ -447,17 +495,17 @@ const Queue = () => {
                                     width: '18px', 
                                     height: '18px', 
                                     borderRadius: '50%', 
-                                    background: '#000', 
+                                    background: 'var(--text-main)', 
                                     display: 'flex', 
                                     alignItems: 'center', 
                                     justifyContent: 'center',
                                     flexShrink: 0
                                 }}>
-                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#FFF" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--background)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
                                         <polyline points="20 6 9 17 4 12" />
                                     </svg>
                                 </div>
-                                <span style={{ fontSize: '0.7rem', fontWeight: '900', color: '#000', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{f}</span>
+                                <span style={{ fontSize: '0.7rem', fontWeight: '900', color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{f}</span>
                             </div>
                         ))}
                     </div>
@@ -474,14 +522,14 @@ const Queue = () => {
                         
                         {/* Header Back Button - Integrated into Banner */}
                         <motion.button 
-                            whileHover={{ scale: 1.05, background: '#1A56C5' }}
+                            whileHover={{ scale: 1.05, background: 'var(--primary-dark)' }}
                             whileTap={{ scale: 0.95 }}
-                            onClick={() => navigate('/saloons')}
+                            onClick={() => navigate('/salons')}
                             style={{ 
                                 position: 'absolute',
                                 top: '16px',
                                 left: '16px',
-                                background: '#276EF1', 
+                                background: 'var(--primary)', 
                                 border: 'none', 
                                 width: '38px', 
                                 height: '38px', 
@@ -548,16 +596,16 @@ const Queue = () => {
                             alignItems: 'center', 
                             marginBottom: '20px',
                             paddingBottom: '16px',
-                            borderBottom: '1px solid #EEEEEE'
+                            borderBottom: '1px solid var(--border)'
                         }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <div style={{ 
-                                    background: '#F6F6F6', 
+                                    background: 'var(--surface)', 
                                     padding: '6px 12px', 
                                     borderRadius: '10px', 
                                     fontSize: '0.7rem', 
                                     fontWeight: '900', 
-                                    color: '#276EF1',
+                                    color: 'var(--primary)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '4px'
@@ -568,12 +616,12 @@ const Queue = () => {
                                     Live
                                 </div>
                                 <div style={{ 
-                                    background: '#F6F6F6', 
+                                    background: 'var(--surface)', 
                                     padding: '6px 12px', 
                                     borderRadius: '10px', 
                                     fontSize: '0.7rem', 
                                     fontWeight: '900', 
-                                    color: '#000',
+                                    color: 'var(--text-main)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '4px'
@@ -584,7 +632,7 @@ const Queue = () => {
                                     Premium
                                 </div>
                             </div>
-                            <div style={{ fontSize: '0.85rem', color: 'rgba(0,0,0,0.4)', fontWeight: '900' }}>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '900' }}>
                                 {activeTokens.length} Active
                             </div>
                         </div>
@@ -592,14 +640,14 @@ const Queue = () => {
                         {bookingStage === 'idle' && (
                             <div style={{ width: '100%' }}>
                                 {/* Active Ticket - Premium Pill */}
-                                {myActiveToken && (
+                                {user && myActiveToken && (
                                     <motion.div 
                                         initial={{ scale: 0.98, opacity: 0 }}
                                         animate={{ scale: 1, opacity: 1 }}
                                         whileTap={{ scale: 0.99 }}
-                                        style={{ 
-                                            background: '#F6F6F6', 
-                                            border: '1px solid rgba(0,0,0,0.03)',
+                                         style={{ 
+                                            background: 'var(--surface)', 
+                                            border: '1px solid var(--border)',
                                             borderRadius: '24px',
                                             padding: '16px 20px',
                                             marginBottom: '24px',
@@ -615,15 +663,15 @@ const Queue = () => {
                                         }}
                                     >
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#FFF', fontWeight: '950', background: '#22C55E', padding: '4px 10px', borderRadius: '12px' }}>Active</div>
-                                            <div style={{ fontSize: '1.2rem', fontWeight: '950', color: '#000' }}>Q{myActiveToken.token_number}</div>
+                                            <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#FFF', fontWeight: '950', background: 'var(--success)', padding: '4px 10px', borderRadius: '12px' }}>Active</div>
+                                            <div style={{ fontSize: '1.2rem', fontWeight: '950', color: 'var(--text-main)' }}>Q{myActiveToken.token_number}</div>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <span style={{ fontSize: '0.9rem', color: 'rgba(0,0,0,0.6)', fontWeight: '900' }}>
+                                            <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: '900' }}>
                                                 {myActiveToken.status === 'called' ? 'Serving' : `Pos: #${getPosition(myActiveToken) + 1}`}
                                             </span>
-                                            <span style={{ color: '#000', fontSize: '1.2rem', fontWeight: '900' }}>→</span>
-                                        </div>
+                                            <span style={{ color: 'var(--text-main)', fontSize: '1.2rem', fontWeight: '900' }}>→</span>
+                                        </div>v>
                                     </motion.div>
                                 )}
 
@@ -637,11 +685,10 @@ const Queue = () => {
                                             setSelectedStaffId(null);
                                             if (!user) setShowAuthModal(true);
                                             else setBookingStage('details');
-                                        }}
-                                        style={{ 
+                                        }}                                         style={{ 
                                             padding: '16px', 
-                                            background: '#F6F6F6', 
-                                            border: '1px solid rgba(0,0,0,0.03)',
+                                            background: 'var(--surface)', 
+                                            border: '1px solid var(--border)',
                                             borderRadius: '24px',
                                             cursor: 'pointer',
                                             display: 'flex',
@@ -653,11 +700,11 @@ const Queue = () => {
                                     >
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
-                                            <div style={{ fontWeight: '950', fontSize: '1rem', color: '#000' }}>Fastest</div>
-                                        </div>
+                                            <div style={{ fontWeight: '950', fontSize: '1rem', color: 'var(--text-main)' }}>Fastest</div>
+                                        </div>v>
                                         <div style={{ 
                                             fontSize: '0.6rem', 
-                                            color: '#fbbf24', 
+                                            color: 'var(--accent)', 
                                             fontWeight: '900', 
                                             textTransform: 'uppercase', 
                                             display: 'flex',
@@ -684,11 +731,10 @@ const Queue = () => {
                                                     setSelectedStaffId(s.id);
                                                     if (!user) setShowAuthModal(true);
                                                     else setBookingStage('details');
-                                                }}
-                                                style={{ 
+                                                }}                                                 style={{ 
                                                     padding: '16px',
-                                                    background: '#FFFFFF',
-                                                    border: '1px solid rgba(0,0,0,0.03)',
+                                                    background: 'var(--card-bg)',
+                                                    border: '1px solid var(--border)',
                                                     borderRadius: '24px',
                                                     cursor: 'pointer',
                                                     display: 'flex',
@@ -699,8 +745,8 @@ const Queue = () => {
                                                     boxShadow: '0 4px 12px rgba(0,0,0,0.02)',
                                                     transition: 'all 0.3s ease'
                                                 }}
-                                            >
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#22c55e', fontSize: '0.8rem', fontWeight: '800' }}>
+                                            > >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--success)', fontSize: '0.8rem', fontWeight: '800' }}>
                                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                                                         <polyline points="20 6 9 17 4 12" />
                                                     </svg>
@@ -714,26 +760,26 @@ const Queue = () => {
                                                         backgroundImage: `url(${s.image_url || '/assets/salman.jpeg'})`,
                                                         backgroundSize: 'cover',
                                                         backgroundPosition: 'center',
-                                                        border: `2px solid ${currentlyServing ? '#4ade80' : '#EEEEEE'}`
+                                                        border: `2px solid ${currentlyServing ? 'var(--success)' : 'var(--border)'}`
                                                     }} />
                                                     <div style={{ overflow: 'hidden' }}>
-                                                        <div style={{ fontWeight: '950', fontSize: '0.9rem', color: '#000', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</div>
-                                                        <div style={{ fontSize: '0.65rem', color: currentlyServing ? '#4ade80' : 'rgba(0,0,0,0.4)', fontWeight: '900' }}>
+                                                        <div style={{ fontWeight: '950', fontSize: '0.9rem', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</div>
+                                                        <div style={{ fontSize: '0.65rem', color: currentlyServing ? 'var(--success)' : 'var(--text-muted)', fontWeight: '900' }}>
                                                             {currentlyServing ? `Q${currentlyServing.token_number}` : 'AVAILABLE'}
                                                         </div>
                                                     </div>
                                                 </div>
                                                 <div style={{ 
                                                     fontSize: '0.7rem', 
-                                                    color: 'rgba(0,0,0,0.3)', 
+                                                    color: 'var(--text-muted)', 
                                                     fontWeight: '900',
-                                                    borderTop: '1px solid #EEEEEE',
+                                                    borderTop: '1px solid var(--border)',
                                                     paddingTop: '8px',
                                                     display: 'flex',
                                                     justifyContent: 'space-between'
                                                 }}>
                                                     <span>WAIT</span>
-                                                    <span style={{ color: '#000' }}>{sWait.mins}m</span>
+                                                    <span style={{ color: 'var(--text-main)' }}>{sWait.mins}m</span>
                                                 </div>
                                             </motion.div>
                                         );
@@ -748,21 +794,21 @@ const Queue = () => {
                                 {bookingStage === 'details' && (
                                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                                         <div style={{ marginBottom: '24px', textAlign: 'center' }}>
-                                            <div style={{ fontSize: '0.75rem', color: 'rgba(0,0,0,0.4)', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: '950', marginBottom: '4px' }}>Booking with</div>
-                                            <div style={{ fontSize: '1.2rem', fontWeight: '950', color: '#000' }}>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: '950', marginBottom: '4px' }}>Booking with</div>
+                                            <div style={{ fontSize: '1.2rem', fontWeight: '950', color: 'var(--text-main)' }}>
                                                 {selectedStaffId ? activeStaff.find(s => s.id === selectedStaffId)?.name : 'Fastest Barber'}
                                             </div>
-                                            <div style={{ fontSize: '0.85rem', color: '#276EF1', marginTop: '4px', fontWeight: '950' }}>Wait: {waitInfo.mins} mins</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--primary)', marginTop: '4px', fontWeight: '950' }}>Wait: {waitInfo.mins} mins</div>
                                         </div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                             <div style={{ textAlign: 'left' }}>
-                                                <label style={{ fontSize: '0.7rem', color: 'rgba(0,0,0,0.4)', textTransform: 'uppercase', fontWeight: '950', marginLeft: '8px', marginBottom: '6px', display: 'block', letterSpacing: '1px' }}>Full Name</label>
+                                                <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '950', marginLeft: '8px', marginBottom: '6px', display: 'block', letterSpacing: '1px' }}>Full Name</label>
                                                 <input 
                                                     type="text" 
                                                     placeholder="e.g. John Doe" 
                                                     value={customerName}
                                                     onChange={e => setCustomerName(e.target.value)}
-                                                    style={{ width: '100%', padding: '14px 20px', background: '#F6F6F6', border: '1px solid #EEEEEE', borderRadius: '16px', color: '#000', fontSize: '1rem', outline: 'none', fontWeight: '800' }}
+                                                    style={{ width: '100%', padding: '14px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', color: 'var(--text-main)', fontSize: '1rem', outline: 'none', fontWeight: '800' }}
                                                 />
                                             </div>
                                             <motion.button
@@ -770,7 +816,7 @@ const Queue = () => {
                                                 whileTap={{ scale: 0.98 }}
                                                 onClick={() => setBookingStage('services')}
                                                 disabled={!customerName}
-                                                style={{ width: '100%', padding: '16px', background: '#000', color: 'white', border: 'none', borderRadius: '16px', fontWeight: '950', fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 20px rgba(0,0,0,0.1)', opacity: !customerName ? 0.5 : 1 }}
+                                                style={{ width: '100%', padding: '16px', background: 'var(--text-main)', color: 'var(--background)', border: 'none', borderRadius: '16px', fontWeight: '950', fontSize: '1rem', cursor: 'pointer', boxShadow: 'var(--shadow-premium)', opacity: !customerName ? 0.5 : 1 }}
                                             >
                                                 Select Services
                                             </motion.button>
@@ -786,7 +832,7 @@ const Queue = () => {
 
                                 {bookingStage === 'services' && (
                                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                                        <div style={{ fontSize: '1.2rem', fontWeight: '950', marginBottom: '20px', color: '#000', textAlign: 'center' }}>Select Services</div>
+                                        <div style={{ fontSize: '1.2rem', fontWeight: '950', marginBottom: '20px', color: 'var(--text-main)', textAlign: 'center' }}>Select Services</div>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px', marginBottom: '24px' }}>
                                             {services.map(s => (
                                                 <motion.button 
@@ -797,9 +843,9 @@ const Queue = () => {
                                                         padding: '14px 20px',
                                                         borderRadius: '16px',
                                                         border: '1px solid',
-                                                        borderColor: selectedServiceIds.includes(s.id) ? '#000' : '#EEEEEE',
-                                                        background: selectedServiceIds.includes(s.id) ? '#000' : '#F6F6F6',
-                                                        color: selectedServiceIds.includes(s.id) ? '#FFF' : '#000',
+                                                        borderColor: selectedServiceIds.includes(s.id) ? 'var(--text-main)' : 'var(--border)',
+                                                        background: selectedServiceIds.includes(s.id) ? 'var(--text-main)' : 'var(--surface)',
+                                                        color: selectedServiceIds.includes(s.id) ? 'var(--background)' : 'var(--text-main)',
                                                         fontSize: '0.9rem',
                                                         cursor: 'pointer',
                                                         transition: 'all 0.2s',
@@ -809,8 +855,8 @@ const Queue = () => {
                                                     }}
                                                 >
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                        <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: '2px solid', borderColor: selectedServiceIds.includes(s.id) ? '#FFF' : '#000', background: selectedServiceIds.includes(s.id) ? '#FFF' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                            {selectedServiceIds.includes(s.id) && <span style={{ color: '#000', fontSize: '0.7rem', fontWeight: '950' }}>✓</span>}
+                                                        <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: '2px solid', borderColor: selectedServiceIds.includes(s.id) ? 'var(--background)' : 'var(--text-main)', background: selectedServiceIds.includes(s.id) ? 'var(--background)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            {selectedServiceIds.includes(s.id) && <span style={{ color: 'var(--text-main)', fontSize: '0.7rem', fontWeight: '950' }}>✓</span>}
                                                         </div>
                                                         <span style={{ fontWeight: '900' }}>{s.name}</span>
                                                     </div>
@@ -823,7 +869,7 @@ const Queue = () => {
                                             whileTap={{ scale: 0.98 }}
                                             onClick={generateToken}
                                             disabled={loading || selectedServiceIds.length === 0}
-                                            style={{ width: '100%', padding: '16px', background: '#276EF1', color: 'white', border: 'none', borderRadius: '16px', fontWeight: '950', fontSize: '1rem', cursor: 'pointer', opacity: (loading || selectedServiceIds.length === 0) ? 0.6 : 1, boxShadow: '0 10px 20px rgba(39, 110, 241, 0.2)' }}
+                                            style={{ width: '100%', padding: '16px', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '16px', fontWeight: '950', fontSize: '1rem', cursor: 'pointer', opacity: (loading || selectedServiceIds.length === 0) ? 0.6 : 1, boxShadow: '0 10px 20px rgba(39, 110, 241, 0.2)' }}
                                         >
                                             {loading ? 'Processing...' : 'Complete Booking'}
                                         </motion.button>
@@ -838,26 +884,26 @@ const Queue = () => {
 
                                 {bookingStage === 'generated' && generatedToken && (
                                     <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ textAlign: 'center', padding: '10px 0' }}>
-                                        <div style={{ fontSize: '0.75rem', color: '#22C55E', fontWeight: '950', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22C55E' }} />
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--success)', fontWeight: '950', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)' }} />
                                             Slot Reserved
                                         </div>
                                         
-                                         <div style={{ background: '#F6F6F6', borderRadius: '24px', border: '1px solid #EEEEEE', padding: '24px', marginBottom: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.02)' }}>
-                                             <div style={{ fontSize: '0.7rem', color: 'rgba(0,0,0,0.3)', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: '950', marginBottom: '8px' }}>Your Ticket</div>
-                                             <div style={{ fontSize: '3rem', fontWeight: '950', color: '#000', lineHeight: 1, marginBottom: '16px', letterSpacing: '-2px' }}>Q{generatedToken.token_number}</div>
+                                         <div style={{ background: 'var(--surface)', borderRadius: '24px', border: '1px solid var(--border)', padding: '24px', marginBottom: '20px', boxShadow: 'var(--shadow-premium)' }}>
+                                             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: '950', marginBottom: '8px' }}>Your Ticket</div>
+                                             <div style={{ fontSize: '3rem', fontWeight: '950', color: 'var(--text-main)', lineHeight: 1, marginBottom: '16px', letterSpacing: '-2px' }}>Q{generatedToken.token_number}</div>
                                              
                                              {generatedToken.preferred_staff_id && (
                                                  <div style={{ 
                                                      marginBottom: '20px', 
                                                      padding: '16px', 
-                                                     background: '#FFFFFF', 
+                                                     background: 'var(--background)', 
                                                      borderRadius: '16px',
                                                      display: 'flex',
                                                      alignItems: 'center',
                                                      gap: '12px',
                                                      justifyContent: 'center',
-                                                     border: '1px solid #EEEEEE'
+                                                     border: '1px solid var(--border)'
                                                  }}>
                                                      <div style={{ 
                                                          width: '40px', 
@@ -865,29 +911,29 @@ const Queue = () => {
                                                          borderRadius: '50%', 
                                                          backgroundImage: `url(${activeStaff.find(s => s.id === generatedToken.preferred_staff_id)?.image_url || '/assets/salman.jpeg'})`,
                                                          backgroundSize: 'cover',
-                                                         border: '2px solid #EEEEEE'
+                                                         border: '2px solid var(--border)'
                                                      }} />
                                                      <div style={{ textAlign: 'left' }}>
-                                                         <div style={{ fontSize: '0.9rem', fontWeight: '950', color: '#000' }}>
+                                                         <div style={{ fontSize: '0.9rem', fontWeight: '950', color: 'var(--text-main)' }}>
                                                              {activeStaff.find(s => s.id === generatedToken.preferred_staff_id)?.name}
                                                          </div>
-                                                         <div style={{ fontSize: '0.7rem', color: getStaffWait(generatedToken.preferred_staff_id, generatedToken).isBusy ? '#fbbf24' : '#22C55E', fontWeight: '900' }}>
+                                                         <div style={{ fontSize: '0.7rem', color: getStaffWait(generatedToken.preferred_staff_id, generatedToken).isBusy ? 'var(--accent)' : 'var(--success)', fontWeight: '900' }}>
                                                              {getStaffWait(generatedToken.preferred_staff_id, generatedToken).isBusy ? `Serving Q${getStaffWait(generatedToken.preferred_staff_id, generatedToken).servingToken}` : 'Ready for you'}
                                                          </div>
                                                      </div>
                                                  </div>
                                              )}
 
-                                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', paddingTop: '16px', borderTop: '1px solid #EEEEEE' }}>
-                                                 <div style={{ fontSize: '0.7rem', color: 'rgba(0,0,0,0.3)', fontWeight: '950', textTransform: 'uppercase', letterSpacing: '1px' }}>Est. Wait Time</div>
+                                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
+                                                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '950', textTransform: 'uppercase', letterSpacing: '1px' }}>Est. Wait Time</div>
                                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                      <CountdownTimer 
                                                          targetDate={new Date(Date.now() + getEstimatedWait(generatedToken).mins * 60000).toISOString()} 
                                                          size="sm" 
-                                                         color="#000"
-                                                         strokeColor="rgba(0,0,0,0.05)"
+                                                         color="var(--text-main)"
+                                                         strokeColor="var(--border)"
                                                      />
-                                                     <span style={{ fontSize: '1.2rem', fontWeight: '950', color: '#276EF1' }}>{getEstimatedWait(generatedToken).mins}m</span>
+                                                     <span style={{ fontSize: '1.2rem', fontWeight: '950', color: 'var(--primary)' }}>{getEstimatedWait(generatedToken).mins}m</span>
                                                  </div>
                                              </div>
                                          </div>
@@ -901,7 +947,7 @@ const Queue = () => {
                                                 setSelectedStaffId(null);
                                                 navigate('/profile');
                                             }}
-                                            style={{ width: '100%', padding: '16px', background: '#000', border: 'none', borderRadius: '16px', color: 'white', fontWeight: '950', fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 20px rgba(0,0,0,0.1)' }}
+                                            style={{ width: '100%', padding: '16px', background: 'var(--text-main)', border: 'none', borderRadius: '16px', color: 'var(--background)', fontWeight: '950', fontSize: '1rem', cursor: 'pointer', boxShadow: 'var(--shadow-premium)' }}
                                         >
                                             Track in Profile
                                         </motion.button>
@@ -916,10 +962,10 @@ const Queue = () => {
                 <div style={{ marginTop: '60px', display: 'flex', flexDirection: 'column', gap: '60px' }}>
                     {/* About Section */}
                     <section>
-                        <div style={{ marginBottom: '24px', borderLeft: '4px solid #000', paddingLeft: '16px' }}>
-                            <h2 style={{ fontSize: '1.5rem', fontWeight: '950', marginBottom: '4px', color: '#000', letterSpacing: '-0.5px' }}>About</h2>
+                        <div style={{ marginBottom: '24px', borderLeft: '4px solid var(--text-main)', paddingLeft: '16px' }}>
+                            <h2 style={{ fontSize: '1.5rem', fontWeight: '950', marginBottom: '4px', color: 'var(--text-main)', letterSpacing: '-0.5px' }}>About</h2>
                         </div>
-                        <p style={{ color: 'rgba(0,0,0,0.6)', fontSize: '1rem', lineHeight: '1.8', fontWeight: '800' }}>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '1rem', lineHeight: '1.8', fontWeight: '800' }}>
                             {aboutText}
                         </p>
                     </section>
@@ -927,9 +973,9 @@ const Queue = () => {
 
                     {/* Gallery Section */}
                     <section style={{ paddingBottom: '80px' }}>
-                        <div style={{ marginBottom: '24px', borderLeft: '4px solid #f43f5e', paddingLeft: '16px' }}>
-                            <h2 style={{ fontSize: '1.5rem', fontWeight: '950', marginBottom: '4px', color: '#000', letterSpacing: '-0.5px' }}>The Space</h2>
-                            <p style={{ color: 'rgba(0,0,0,0.4)', fontSize: '0.85rem', fontWeight: '900' }}>Our aesthetic workspace.</p>
+                        <div style={{ marginBottom: '24px', borderLeft: '4px solid var(--accent)', paddingLeft: '16px' }}>
+                            <h2 style={{ fontSize: '1.5rem', fontWeight: '950', marginBottom: '4px', color: 'var(--text-main)', letterSpacing: '-0.5px' }}>The Space</h2>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '900' }}>Our aesthetic workspace.</p>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
                             {gallery.map((url, i) => (
@@ -942,10 +988,10 @@ const Queue = () => {
                                         backgroundImage: `url(${url})`,
                                         backgroundSize: 'cover',
                                         backgroundPosition: 'center',
-                                        border: '1px solid #EEEEEE',
+                                        border: '1px solid var(--border)',
                                         cursor: 'zoom-in',
                                         transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        boxShadow: '0 10px 30px rgba(0,0,0,0.05)'
+                                        boxShadow: 'var(--shadow-premium)'
                                     }}
                                 />
                             ))}
@@ -962,7 +1008,7 @@ const Queue = () => {
                         animate={{ opacity: 1 }} 
                         exit={{ opacity: 0 }}
                         onClick={() => setShowAuthModal(false)}
-                        style={{ position: 'fixed', inset: 0, background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(20px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        style={{ position: 'fixed', inset: 0, background: 'var(--modal-overlay)', backdropFilter: 'blur(20px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     >
                         <motion.div 
                             initial={{ scale: 0.9, y: 20 }}
@@ -972,11 +1018,11 @@ const Queue = () => {
                                 position: 'relative', 
                                 width: '90%', 
                                 maxWidth: '420px', 
-                                background: '#FFFFFF', 
-                                border: '1px solid #EEEEEE', 
+                                background: 'var(--card-bg)', 
+                                border: '1px solid var(--border)', 
                                 borderRadius: '40px', 
                                 padding: '50px 40px',
-                                boxShadow: '0 40px 100px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.02)'
+                                boxShadow: '0 40px 100px rgba(0,0,0,0.2), 0 0 0 1px var(--border)'
                             }}
                         >
                             <button 
@@ -985,15 +1031,15 @@ const Queue = () => {
                                     position: 'absolute', 
                                     top: '30px', 
                                     right: '30px', 
-                                    background: '#F6F6F6', 
-                                    border: '1px solid #EEEEEE', 
+                                    background: 'var(--surface)', 
+                                    border: '1px solid var(--border)', 
                                     borderRadius: '50%', 
                                     width: '40px', 
                                     height: '40px', 
                                     display: 'flex', 
                                     alignItems: 'center', 
                                     justifyContent: 'center', 
-                                    color: '#000', 
+                                    color: 'var(--text-main)', 
                                     cursor: 'pointer',
                                     fontSize: '1.5rem',
                                     fontWeight: '300',
@@ -1002,36 +1048,36 @@ const Queue = () => {
                             >
                                 ×
                             </button>
-                            <h2 style={{ fontSize: '2rem', fontWeight: '950', marginBottom: '8px', textAlign: 'center', color: '#000', letterSpacing: '-1px' }}>
+                            <h2 style={{ fontSize: '2rem', fontWeight: '950', marginBottom: '8px', textAlign: 'center', color: 'var(--text-main)', letterSpacing: '-1px' }}>
                                 {authMode === 'signup' ? 'Create Account' : 'Welcome Back'}
                             </h2>
-                            <p style={{ textAlign: 'center', color: 'rgba(0,0,0,0.4)', fontSize: '0.95rem', marginBottom: '40px', fontWeight: '900' }}>
+                            <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: '40px', fontWeight: '900' }}>
                                 Join the queue instantly with your phone.
                             </p>
                             
                             <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                 {authMode === 'signup' && (
                                     <div style={{ position: 'relative' }}>
-                                        <input 
-                                            type="text" 
-                                            placeholder="Full Name" 
-                                            value={customerName} 
-                                            onChange={e => setCustomerName(e.target.value)} 
-                                            required
-                                            style={{ 
-                                                width: '100%', 
-                                                padding: '18px 18px 18px 50px', 
-                                                background: '#F6F6F6', 
-                                                border: '1px solid #EEEEEE', 
-                                                borderRadius: '20px', 
-                                                color: '#000',
-                                                fontSize: '1rem',
-                                                outline: 'none',
-                                                fontWeight: '800',
-                                                transition: 'all 0.3s ease'
-                                            }} 
-                                        />
-                                        <span style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }}>
+                                            <input 
+                                                type="text" 
+                                                placeholder="Full Name" 
+                                                value={customerName} 
+                                                onChange={e => setCustomerName(e.target.value)} 
+                                                required
+                                                style={{ 
+                                                    width: '100%', 
+                                                    padding: '18px 18px 18px 50px', 
+                                                    background: 'var(--background)', 
+                                                    border: '1px solid var(--border)', 
+                                                    borderRadius: '20px', 
+                                                    color: 'var(--text-main)',
+                                                    fontSize: '1rem',
+                                                    outline: 'none',
+                                                    fontWeight: '800',
+                                                    transition: 'all 0.3s ease'
+                                                }} 
+                                            />
+                                        <span style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', opacity: 0.5 }}>
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                                                 <circle cx="12" cy="7" r="4" />
@@ -1049,16 +1095,16 @@ const Queue = () => {
                                         style={{ 
                                             width: '100%', 
                                             padding: '18px 18px 18px 50px', 
-                                            background: '#F6F6F6', 
-                                            border: '1px solid #EEEEEE', 
+                                            background: 'var(--background)', 
+                                            border: '1px solid var(--border)', 
                                             borderRadius: '20px', 
-                                            color: '#000',
+                                            color: 'var(--text-main)',
                                             fontSize: '1rem',
                                             outline: 'none',
                                             fontWeight: '800'
                                         }} 
                                     />
-                                    <span style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }}>
+                                    <span style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', opacity: 0.5 }}>
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                             <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
                                             <line x1="12" y1="18" x2="12.01" y2="18" />
@@ -1075,16 +1121,16 @@ const Queue = () => {
                                         style={{ 
                                             width: '100%', 
                                             padding: '18px 18px 18px 50px', 
-                                            background: '#F6F6F6', 
-                                            border: '1px solid #EEEEEE', 
+                                            background: 'var(--background)', 
+                                            border: '1px solid var(--border)', 
                                             borderRadius: '20px', 
-                                            color: '#000',
+                                            color: 'var(--text-main)',
                                             fontSize: '1rem',
                                             outline: 'none',
                                             fontWeight: '800'
                                         }} 
                                     />
-                                    <span style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }}>
+                                    <span style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', opacity: 0.5 }}>
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                             <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3m-3-3l-4-4" />
                                         </svg>
@@ -1105,15 +1151,15 @@ const Queue = () => {
                                     style={{ 
                                         width: '100%', 
                                         padding: '20px', 
-                                        background: '#000', 
-                                        color: 'white', 
+                                        background: 'var(--text-main)', 
+                                        color: 'var(--background)', 
                                         border: 'none', 
                                         borderRadius: '20px', 
                                         fontWeight: '950', 
                                         marginTop: '10px',
                                         fontSize: '1.1rem',
                                         cursor: loading ? 'not-allowed' : 'pointer',
-                                        boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+                                        boxShadow: 'var(--shadow-premium)',
                                         transition: 'all 0.3s ease'
                                     }}
                                 >
@@ -1121,7 +1167,7 @@ const Queue = () => {
                                 </motion.button>
                             </form>
                             <div style={{ textAlign: 'center', marginTop: '30px' }}>
-                                <button onClick={() => setAuthMode(authMode === 'signup' ? 'login' : 'signup')} style={{ background: 'none', border: 'none', color: '#276EF1', fontWeight: '950', cursor: 'pointer', fontSize: '0.95rem' }}>
+                                <button onClick={() => setAuthMode(authMode === 'signup' ? 'login' : 'signup')} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: '950', cursor: 'pointer', fontSize: '0.95rem' }}>
                                     {authMode === 'signup' ? 'Already have an account? Login' : 'New here? Create account'}
                                 </button>
                             </div>

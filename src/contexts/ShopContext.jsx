@@ -32,7 +32,7 @@ export const ShopProvider = ({ children }) => {
         setLoading(true);
         try {
             // Fetch Shops with Services
-            let query = supabase.from('shops').select('*, services(name, image_url)').order('created_at', { ascending: true });
+            let query = supabase.from('shops').select('*').order('created_at', { ascending: true });
             
             // If not super_admin, only show active shops
             if (role !== 'super_admin') {
@@ -41,7 +41,18 @@ export const ShopProvider = ({ children }) => {
 
             const shopsRes = await query;
             if (shopsRes.error) throw shopsRes.error;
-            setShops(shopsRes.data || []);
+            
+            // Fetch All Services to link with shops (avoiding complex joins that cause 500s)
+            const { data: allServices, error: servicesErr } = await supabase
+                .from('services')
+                .select('id, name, image_url, shop_id, price');
+            
+            const shopsWithServices = (shopsRes.data || []).map(shop => ({
+                ...shop,
+                services: (allServices || []).filter(s => s.shop_id === shop.id)
+            }));
+
+            setShops(shopsWithServices);
 
             // Fetch Products
             const productsRes = await supabase

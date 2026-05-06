@@ -68,7 +68,7 @@ const EMPTY_FORM = {
     rating: 5.0,
     experience_years: 0,
     skills: '',
-    past_saloons: '',
+    past_salons: '',
     certificates: '',
     certificate_urls: [],
     gallery_urls: [],
@@ -184,7 +184,7 @@ const AdminStaff = () => {
             rating: member.rating || 5.0,
             experience_years: member.experience_years || 0,
             skills: Array.isArray(member.skills) ? member.skills.join(', ') : '',
-            past_saloons: Array.isArray(member.past_saloons) ? member.past_saloons.join(', ') : '',
+            past_salons: Array.isArray(member.past_salons) ? member.past_salons.join(', ') : '',
             certificates: Array.isArray(member.certificates) ? member.certificates.join(', ') : '',
             certificate_urls: member.certificate_urls || [],
             gallery_urls: member.gallery_urls || [],
@@ -209,7 +209,7 @@ const AdminStaff = () => {
                 rating: parseFloat(form.rating) || 5.0,
                 experience_years: parseInt(form.experience_years) || 0,
                 skills: form.skills ? form.skills.split(',').map(s => s.trim()).filter(Boolean) : [],
-                past_saloons: form.past_saloons ? form.past_saloons.split(',').map(s => s.trim()).filter(Boolean) : [],
+                past_salons: form.past_salons ? form.past_salons.split(',').map(s => s.trim()).filter(Boolean) : [],
                 certificates: form.certificates ? form.certificates.split(',').map(s => s.trim()).filter(Boolean) : [],
                 certificate_urls: form.certificate_urls || [],
                 gallery_urls: form.gallery_urls || [],
@@ -391,8 +391,8 @@ const AdminStaff = () => {
                             </div>
 
                             <div style={S.formGroup}>
-                                <label style={S.label}>Past Saloons (Comma separated)</label>
-                                <input style={S.input} value={form.past_saloons} onChange={handleChange('past_saloons')} placeholder="The Vintage Barbershop, Elite Cutz" />
+                                <label style={S.label}>Past Salons (Comma separated)</label>
+                                <input style={S.input} value={form.past_salons} onChange={handleChange('past_salons')} placeholder="The Vintage Barbershop, Elite Cutz" />
                             </div>
 
                             <div style={S.formGroup}>

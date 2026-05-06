@@ -237,7 +237,7 @@ const PublicDisplay = () => {
             {/* Bottom Announcement */}
             <footer style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', opacity: 0.7, fontSize: '14px', marginBottom: '2vh' }}>
                 <span>🔊</span>
-                <span>It's TrimTime! Token Q{mainToken?.token_number || '---'} please move to the counter.</span>
+                <span>It's TrimTimes! Token Q{mainToken?.token_number || '---'} please move to the counter.</span>
             </footer>
 
             {/* Trust Ticker - Refined Bottom Bar */}
@@ -281,7 +281,7 @@ const PublicDisplay = () => {
                                     padding: '6px 16px', 
                                     borderRadius: '8px',
                                     boxShadow: '0 0 20px rgba(255, 75, 110, 0.2)'
-                                }}>POWERED BY TRIMTIME</span>
+                                }}>POWERED BY TRIMTIMES</span>
                             </div>
                         </div>
                     ))}

@@ -168,8 +168,17 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = async () => {
-        const { error } = await supabase.auth.signOut();
-        if (error) throw error;
+        try {
+            // Clear local state immediately for instant UI response
+            setUser(null);
+            setRole(null);
+            setShopId(null);
+            localStorage.removeItem('trimtime_active_token');
+            
+            await supabase.auth.signOut();
+        } catch (error) {
+            console.error('Logout error:', error.message);
+        }
     };
 
     return (

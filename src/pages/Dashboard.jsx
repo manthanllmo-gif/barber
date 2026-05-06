@@ -73,7 +73,7 @@ const Dashboard = () => {
         skills: '',
         certificates: '',
         certificate_urls: [],
-        past_saloons: '',
+        past_salons: '',
         trainings: '',
         features: '',
         gallery_urls: [],
@@ -686,7 +686,7 @@ const Dashboard = () => {
                 skills: staffForm.skills ? String(staffForm.skills).split(',').map(s => s.trim()).filter(Boolean) : [],
                 certificates: staffForm.certificates ? String(staffForm.certificates).split(',').map(s => s.trim()).filter(Boolean) : [],
                 certificate_urls: staffForm.certificate_urls || [],
-                past_saloons: staffForm.past_saloons ? String(staffForm.past_saloons).split(',').map(s => s.trim()).filter(Boolean) : [],
+                past_salons: staffForm.past_salons ? String(staffForm.past_salons).split(',').map(s => s.trim()).filter(Boolean) : [],
                 trainings: staffForm.trainings ? String(staffForm.trainings).split(',').map(s => s.trim()).filter(Boolean) : [],
                 features: staffForm.features ? String(staffForm.features).split(',').map(s => s.trim()).filter(Boolean) : [],
                 gallery_urls: staffForm.gallery_urls || [],
@@ -762,7 +762,7 @@ const Dashboard = () => {
                 skills: Array.isArray(editingStaff.skills) ? editingStaff.skills : (editingStaff.skills ? String(editingStaff.skills).split(',').map(s => s.trim()).filter(Boolean) : []),
                 certificates: Array.isArray(editingStaff.certificates) ? editingStaff.certificates : (editingStaff.certificates ? String(editingStaff.certificates).split(',').map(s => s.trim()).filter(Boolean) : []),
                 certificate_urls: editingStaff.certificate_urls || [],
-                past_saloons: Array.isArray(editingStaff.past_saloons) ? editingStaff.past_saloons : (editingStaff.past_saloons ? String(editingStaff.past_saloons).split(',').map(s => s.trim()).filter(Boolean) : []),
+                past_salons: Array.isArray(editingStaff.past_salons) ? editingStaff.past_salons : (editingStaff.past_salons ? String(editingStaff.past_salons).split(',').map(s => s.trim()).filter(Boolean) : []),
                 trainings: Array.isArray(editingStaff.trainings) ? editingStaff.trainings : (editingStaff.trainings ? String(editingStaff.trainings).split(',').map(s => s.trim()).filter(Boolean) : []),
                 features: Array.isArray(editingStaff.features) ? editingStaff.features : (editingStaff.features ? String(editingStaff.features).split(',').map(s => s.trim()).filter(Boolean) : []),
                 gallery_urls: editingStaff.gallery_urls || [],
@@ -970,9 +970,41 @@ const Dashboard = () => {
                         <div className="sidebar-brand">
                             <div className="brand-logo">💈</div>
                             <div className="brand-text">
-                                <div style={{ fontWeight: '900', color: '#000', fontSize: '20px', letterSpacing: '-0.5px' }}>TrimTime</div>
-                                <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', marginTop: '2px' }}>{shopData?.name || 'Shop Admin'}</div>
+                                <div style={{ fontWeight: '900', color: 'var(--text-main)', fontSize: '20px', letterSpacing: '-0.5px' }}>TrimTimes</div>
+                                <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600', marginTop: '2px' }}>{shopData?.name || 'Shop Admin'}</div>
                             </div>
+                        </div>
+
+                        <div style={{ padding: '0 20px 20px' }}>
+                            <button 
+                                onClick={logout}
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '12px', 
+                                    background: 'rgba(255,59,48,0.08)', 
+                                    border: '1px solid rgba(255,59,48,0.1)', 
+                                    borderRadius: '14px', 
+                                    color: '#FF3B30', 
+                                    fontSize: '13px', 
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.background = 'rgba(255,59,48,0.12)';
+                                    e.currentTarget.style.transform = 'translateY(-1px)';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.background = 'rgba(255,59,48,0.08)';
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                }}
+                            >
+                                <span style={{ fontSize: '16px' }}>🚪</span> Logout
+                            </button>
                         </div>
 
                         <nav className="sidebar-nav">
@@ -999,27 +1031,7 @@ const Dashboard = () => {
                             ))}
                         </nav>
 
-                        <div className="sidebar-footer">
-                            <button 
-                                onClick={logout}
-                                style={{ 
-                                    width: '100%', 
-                                    padding: '12px', 
-                                    background: 'rgba(0,0,0,0.05)', 
-                                    border: 'none', 
-                                    borderRadius: '12px', 
-                                    color: '#000', 
-                                    fontSize: '13px', 
-                                    fontWeight: '600',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '10px'
-                                }}
-                            >
-                                🚪 Logout
-                            </button>
-                        </div>
+
                     </aside>
                 </>
             )}
@@ -1031,10 +1043,10 @@ const Dashboard = () => {
                         <div className="mobile-header-brand" style={{ 
                             fontSize: '1rem', 
                             fontWeight: '950', 
-                            color: '#000000', 
+                            color: 'var(--text-main)', 
                             letterSpacing: '-0.8px' 
                         }}>
-                            TRIMTIME<span style={{ color: '#276EF1' }}>.</span>
+                            TRIMTIMES<span style={{ color: 'var(--primary)' }}>.</span>
                         </div>
                         <button 
                             className="mobile-only-btn"
@@ -1076,20 +1088,21 @@ const Dashboard = () => {
                 {/* OWNER QUICK CONTROL INTERFACE */}
                 {isOwner && (
                     <div className="owner-quick-controls" style={{ 
-                        background: '#000000', 
+                        background: 'var(--surface-elevated)', 
                         padding: '40px', 
                         borderRadius: '32px', 
                         marginBottom: '40px',
-                        color: '#FFF',
+                        color: 'var(--text-main)',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '32px',
-                        boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
+                        boxShadow: 'var(--shadow-premium)',
+                        border: '1px solid var(--border)'
                     }}>
                         <div className="quick-controls-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
                             <div>
-                                <h2 style={{ margin: 0, fontSize: '32px', fontWeight: '950', letterSpacing: '-1.5px', color: '#FFF' }}>Queue Control</h2>
-                                <p style={{ color: 'rgba(255,255,255,0.5)', margin: '8px 0 0', fontSize: '14px' }}>Managing {pendingTokens.length} waiting customers</p>
+                                <h2 style={{ margin: 0, fontSize: '32px', fontWeight: '950', letterSpacing: '-1.5px', color: 'var(--text-main)' }}>Queue Control</h2>
+                                <p style={{ color: 'var(--text-muted)', margin: '8px 0 0', fontSize: '14px' }}>Managing {pendingTokens.length} waiting customers</p>
                             </div>
                             <div className="quick-controls-actions" style={{ 
                                 display: 'flex', 
@@ -1102,9 +1115,9 @@ const Dashboard = () => {
                                 <button 
                                     onClick={() => setIsWalkinModalOpen(true)}
                                     style={{
-                                        background: 'rgba(255,255,255,0.1)',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        color: '#FFF',
+                                        background: 'var(--surface)',
+                                        border: '1px solid var(--border)',
+                                        color: 'var(--text-main)',
                                         padding: '10px 18px',
                                         borderRadius: '14px',
                                         fontSize: '13px',
@@ -1116,17 +1129,17 @@ const Dashboard = () => {
                                         transition: 'all 0.2s',
                                         whiteSpace: 'nowrap'
                                     }}
-                                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
-                                    onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                                    onMouseOver={(e) => e.currentTarget.style.background = 'var(--border)'}
+                                    onMouseOut={(e) => e.currentTarget.style.background = 'var(--surface)'}
                                 >
                                     <span style={{ fontSize: '16px' }}>➕</span> New Walk-in
                                 </button>
                                 <button 
                                     onClick={() => window.open(`/display/${currentShopId}`, '_blank')}
                                     style={{
-                                        background: 'rgba(255,255,255,0.08)',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        color: '#FFF',
+                                        background: 'var(--glass-bg)',
+                                        border: '1px solid var(--glass-border)',
+                                        color: 'var(--text-main)',
                                         padding: '10px 18px',
                                         borderRadius: '14px',
                                         fontSize: '13px',
@@ -1140,11 +1153,11 @@ const Dashboard = () => {
                                         backdropFilter: 'blur(10px)'
                                     }}
                                     onMouseOver={(e) => {
-                                        e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+                                        e.currentTarget.style.background = 'var(--surface)';
                                         e.currentTarget.style.transform = 'translateY(-2px)';
                                     }}
                                     onMouseOut={(e) => {
-                                        e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                                        e.currentTarget.style.background = 'var(--glass-bg)';
                                         e.currentTarget.style.transform = 'translateY(0)';
                                     }}
                                 >
@@ -1154,35 +1167,35 @@ const Dashboard = () => {
                                     textAlign: 'right', 
                                     whiteSpace: 'nowrap', 
                                     paddingLeft: '16px',
-                                    borderLeft: '1px solid rgba(255,255,255,0.1)',
+                                    borderLeft: '1px solid var(--border)',
                                     marginLeft: '4px',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     justifyContent: 'center'
                                 }}>
-                                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '2px', fontWeight: '700' }}>Active Staff</div>
-                                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#FFF', lineHeight: '1' }}>{busyTokens.length} / {staffList.length}</div>
+                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '2px', fontWeight: '700' }}>Active Staff</div>
+                                    <div style={{ fontSize: '18px', fontWeight: '900', color: 'var(--text-main)', lineHeight: '1' }}>{busyTokens.length} / {staffList.length}</div>
                                 </div>
                             </div>
                         </div>
 
                         <div className="quick-controls-grid" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '32px', alignItems: 'center' }}>
-                            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '24px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '16px', fontWeight: '600' }}>NEXT IN LINE</div>
+                            <div style={{ background: 'var(--surface)', padding: '24px', borderRadius: '24px', border: '1px solid var(--border)' }}>
+                                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px', fontWeight: '600' }}>NEXT IN LINE</div>
                                 {pendingTokens.length > 0 ? (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                                        <div style={{ width: '60px', height: '60px', background: '#FFF', color: '#000', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: '900' }}>
+                                        <div style={{ width: '60px', height: '60px', background: 'var(--primary)', color: '#FFF', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: '900' }}>
                                             Q{pendingTokens[0].token_number}
                                         </div>
                                         <div>
-                                            <div style={{ fontSize: '20px', fontWeight: '800' }}>{pendingTokens[0].customer_name || 'Guest User'}</div>
-                                            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>
+                                            <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)' }}>{pendingTokens[0].customer_name || 'Guest User'}</div>
+                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
                                                 {pendingTokens[0].services_selected?.length || 0} services • Waiting {Math.floor((new Date() - new Date(pendingTokens[0].created_at)) / 60000)}m
                                             </div>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div style={{ color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>No customers waiting</div>
+                                    <div style={{ color: 'var(--text-muted)', fontStyle: 'italic', opacity: 0.5 }}>No customers waiting</div>
                                 )}
                             </div>
 
@@ -1191,9 +1204,9 @@ const Dashboard = () => {
                                     onClick={() => handleSkip(pendingTokens[0])}
                                     disabled={loading || pendingTokens.length === 0}
                                     style={{ 
-                                        background: 'rgba(255,255,255,0.08)', 
-                                        color: '#FFFFFF', 
-                                        border: '1px solid rgba(255,255,255,0.1)', 
+                                        background: 'var(--surface)', 
+                                        color: 'var(--text-main)', 
+                                        border: '1px solid var(--border)', 
                                         padding: '24px', 
                                         borderRadius: '24px', 
                                         fontSize: '18px', 
@@ -1207,8 +1220,8 @@ const Dashboard = () => {
                                         justifyContent: 'center',
                                         gap: '8px'
                                     }}
-                                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}
-                                    onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                                    onMouseOver={(e) => e.currentTarget.style.background = 'var(--border)'}
+                                    onMouseOut={(e) => e.currentTarget.style.background = 'var(--surface)'}
                                 >
                                     <span style={{ fontSize: '20px' }}>⏭️</span>
                                     <span>SKIP</span>
@@ -1218,8 +1231,8 @@ const Dashboard = () => {
                                     onClick={handleStartNext}
                                     disabled={loading || pendingTokens.length === 0 || availableStaff.length === 0}
                                     style={{ 
-                                        background: '#FFFFFF', 
-                                        color: '#000000', 
+                                        background: 'var(--text-main)', 
+                                        color: 'var(--background)', 
                                         border: 'none', 
                                         padding: '24px', 
                                         borderRadius: '24px', 
@@ -1233,7 +1246,7 @@ const Dashboard = () => {
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         gap: '8px',
-                                        boxShadow: '0 10px 20px rgba(0,0,0,0.2)'
+                                        boxShadow: 'var(--shadow-premium)'
                                     }}
                                 >
                                     <span style={{ fontSize: '20px' }}>▶️</span>
@@ -1246,17 +1259,17 @@ const Dashboard = () => {
                 )}
 
                 <div className="stats-grid">
-                    <div className="stat-card premium-card" style={{ background: 'rgba(16, 185, 129, 0.03)', borderColor: 'rgba(16, 185, 129, 0.1)' }}>
+                    <div className="stat-card premium-card" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                         <div className="stat-label">💰 Today's Revenue</div>
-                        <div className="stat-value" style={{ color: 'var(--success)', textShadow: '0 0 20px rgba(16, 185, 129, 0.2)' }}>₹{todayRevenue.toLocaleString('en-IN')}</div>
+                        <div className="stat-value" style={{ color: 'var(--success)', textShadow: '0 0 20px var(--success)' }}>₹{todayRevenue.toLocaleString('en-IN')}</div>
                     </div>
-                    <div className="stat-card premium-card" style={{ background: 'rgba(99, 102, 241, 0.03)', borderColor: 'rgba(99, 102, 241, 0.1)' }}>
+                    <div className="stat-card premium-card" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                         <div className="stat-label">📅 This Month</div>
-                        <div className="stat-value" style={{ color: 'var(--primary)', textShadow: '0 0 20px rgba(99, 102, 241, 0.2)' }}>₹{monthlyRevenue.toLocaleString('en-IN')}</div>
+                        <div className="stat-value" style={{ color: 'var(--primary)', textShadow: '0 0 20px var(--primary)' }}>₹{monthlyRevenue.toLocaleString('en-IN')}</div>
                     </div>
-                    <div className="stat-card premium-card" style={{ background: 'rgba(168, 85, 247, 0.03)', borderColor: 'rgba(168, 85, 247, 0.1)' }}>
+                    <div className="stat-card premium-card" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                         <div className="stat-label">🎟️ Tokens Served</div>
-                        <div className="stat-value" style={{ color: 'var(--accent)', textShadow: '0 0 20px rgba(168, 85, 247, 0.2)' }}>{tokensServedTotal}</div>
+                        <div className="stat-value" style={{ color: 'var(--accent)', textShadow: '0 0 20px var(--accent)' }}>{tokensServedTotal}</div>
                     </div>
                 </div>
 
@@ -1306,14 +1319,15 @@ const Dashboard = () => {
                                     {staffList.filter(s => s.is_active !== false || busyTokens.some(t => t.staff_id === s.id)).map(staff => {
                                         const assignedToken = busyTokens.find(t => t.staff_id === staff.id);
                                         return (
-                                            <div key={staff.id} className="staff-item premium-card" style={{ border: assignedToken ? '1px solid var(--primary-glow)' : '1px solid rgba(255,255,255,0.06)' }}>
+                                            <div key={staff.id} className="staff-item premium-card" style={{ border: assignedToken ? '1px solid var(--primary)' : '1px solid var(--border)' }}>
                                                 <div className="staff-info">
                                                     <div className="avatar" style={{ 
-                                                        background: assignedToken ? 'var(--premium-gradient)' : 'rgba(255,255,255,0.03)',
-                                                        boxShadow: assignedToken ? '0 10px 20px -5px rgba(99, 102, 241, 0.4)' : 'none',
+                                                        background: assignedToken ? 'var(--premium-gradient)' : 'var(--surface)',
+                                                        boxShadow: assignedToken ? '0 10px 20px -5px var(--primary-glow)' : 'none',
                                                         display: 'flex',
                                                         alignItems: 'center',
-                                                        justifyContent: 'center'
+                                                        justifyContent: 'center',
+                                                        color: assignedToken ? 'var(--background)' : 'var(--text-main)'
                                                     }}>
                                                         {assignedToken ? '⚡' : '👤'}
                                                     </div>
@@ -1321,10 +1335,10 @@ const Dashboard = () => {
                                                         <div style={{ fontWeight: '800', fontSize: '16px', color: 'var(--text-main)' }}>{staff.name}</div>
                                                         {assignedToken ? (
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
-                                                                <div style={{ fontSize: '11px', fontWeight: '800', background: 'rgba(255,255,255,0.08)', padding: '4px 10px', borderRadius: '8px', color: 'var(--primary)' }}>
+                                                                <div style={{ fontSize: '11px', fontWeight: '800', background: 'var(--surface)', padding: '4px 10px', borderRadius: '8px', color: 'var(--primary)' }}>
                                                                     Q{assignedToken.token_number}
                                                                 </div>
-                                                                <div className="separator" style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)' }}></div>
+                                                                <div className="separator" style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--border)' }}></div>
                                                                 <CountdownTimer 
                                                                     targetDate={getRemainingServiceTime(assignedToken)} 
                                                                     size="sm" 
@@ -1368,7 +1382,7 @@ const Dashboard = () => {
                                 <div>
                                     <h3 className="section-title" style={{ fontSize: '18px', marginBottom: '24px', color: 'var(--text-muted)' }}>Waiting Line ({pendingTokens.length})</h3>
                                     {pendingTokens.length === 0 ? (
-                                        <div style={{ padding: '60px', textAlign: 'center', background: 'rgba(255,255,255,0.01)', borderRadius: '24px', border: '1px dashed var(--glass-border)' }}>
+                                        <div style={{ padding: '60px', textAlign: 'center', background: 'var(--surface)', borderRadius: '24px', border: '1px dashed var(--border)' }}>
                                             <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '14px' }}>No clients in the waiting line.</p>
                                         </div>
                                     ) : (
@@ -1384,7 +1398,7 @@ const Dashboard = () => {
                                                             {token.preferred_staff_id && (
                                                                 <div style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: '800', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                                     <span style={{ opacity: 0.5 }}>REQUESTED:</span> 
-                                                                    <span style={{ background: 'rgba(99, 102, 241, 0.1)', padding: '2px 8px', borderRadius: '6px' }}>
+                                                                    <span style={{ background: 'var(--primary-glow)', padding: '2px 8px', borderRadius: '6px' }}>
                                                                         {staffList.find(s => s.id === token.preferred_staff_id)?.name}
                                                                     </span>
                                                                 </div>
@@ -2181,8 +2195,8 @@ const Dashboard = () => {
                         </div>
 
                         <div className="form-group" style={{ marginBottom: '16px' }}>
-                            <label className="form-label">Past Saloons (Comma separated)</label>
-                            <input type="text" value={editingStaff ? (Array.isArray(editingStaff.past_saloons) ? editingStaff.past_saloons.join(', ') : editingStaff.past_saloons) : staffForm.past_saloons} onChange={(e) => editingStaff ? setEditingStaff({...editingStaff, past_saloons: e.target.value}) : setStaffForm({...staffForm, past_saloons: e.target.value})} className="form-input" placeholder="The Vintage Barbershop, Elite Cutz" />
+                            <label className="form-label">Past Salons (Comma separated)</label>
+                            <input type="text" value={editingStaff ? (Array.isArray(editingStaff.past_salons) ? editingStaff.past_salons.join(', ') : editingStaff.past_salons) : staffForm.past_salons} onChange={(e) => editingStaff ? setEditingStaff({...editingStaff, past_salons: e.target.value}) : setStaffForm({...staffForm, past_salons: e.target.value})} className="form-input" placeholder="The Vintage Barbershop, Elite Cutz" />
                         </div>
 
                         <div className="form-group" style={{ marginBottom: '16px' }}>

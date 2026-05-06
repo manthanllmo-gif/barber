@@ -26,11 +26,11 @@ const Pitch = () => {
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/20 to-[#0f172a] z-10" />
           {/* Background image placeholder - will be replaced by generated asset path in final tweak or used as CSS background */}
-          <div className="absolute inset-0 opacity-40 bg-[url('https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center" />
+          <div className="absolute inset-0 opacity-40 bg-[url('/assets/image4.jpg')] bg-cover bg-center" />
         </div>
-        
+
         <div className="relative z-20 max-w-5xl mx-auto px-6 text-center">
-          <motion.span 
+          <motion.span
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5 }}
@@ -38,7 +38,7 @@ const Pitch = () => {
           >
             The Future of Barbering
           </motion.span>
-          <motion.h1 
+          <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
@@ -46,13 +46,13 @@ const Pitch = () => {
           >
             Stop Paying to <span className="text-indigo-400">Lose</span> Customers.
           </motion.h1>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
             className="text-xl md:text-2xl text-slate-300 mb-10 max-w-3xl mx-auto font-inter"
           >
-            Every "How long is the wait?" kills a barber's focus. Every walk-out is money lost. 
+            Every "How long is the wait?" kills a barber's focus. Every walk-out is money lost.
             TrimTime turns chaos into a premium, digital experience.
           </motion.p>
           <motion.div
@@ -82,7 +82,7 @@ const Pitch = () => {
                 <div className="p-6 bg-rose-50 rounded-[32px] border-l-8 border-rose-500 shadow-sm">
                   <h4 className="font-black text-black text-lg mb-2" style={{ color: '#000000' }}>01. The Silent Revenue Leak</h4>
                   <p className="text-rose-900 text-sm leading-relaxed">
-                    A potential customer peaks through your window. They see 5 people waiting. Without a clear wait time, they assume the worst and walk away. 
+                    A potential customer peaks through your window. They see 5 people waiting. Without a clear wait time, they assume the worst and walk away.
                     <strong className="text-black font-black underline decoration-rose-500/30"> You just lost a ₹500 cut without even knowing it.</strong>
                   </p>
                 </div>
@@ -124,15 +124,15 @@ const Pitch = () => {
               </div>
             </div>
             <div className="lg:col-span-2">
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, x: 50 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 transition={{ duration: 1 }}
                 className="rounded-3xl overflow-hidden shadow-2xl border-8 border-white sticky top-24"
               >
-                <img 
-                  src="/assets/pitch/chaos.png" 
-                  alt="Chaotic Barber Shop" 
+                <img
+                  src="/assets/pitch/chaos.png"
+                  alt="Chaotic Barber Shop"
                   className="w-full h-auto grayscale-[30%] hover:grayscale-0 transition-all duration-700"
                 />
               </motion.div>
@@ -152,62 +152,62 @@ const Pitch = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
-              { 
-                label: "Queue Entry", 
-                old: "Messy clipboards & shouting names.", 
+              {
+                label: "Queue Entry",
+                old: "Messy clipboards & shouting names.",
                 new: "One-tap digital entry on any device.",
                 icon: "📝"
               },
-              { 
-                label: "Waiting", 
-                old: "Customers tethered to shop chairs.", 
+              {
+                label: "Waiting",
+                old: "Customers tethered to shop chairs.",
                 new: "Freedom to roam & track live.",
                 icon: "☕"
               },
-              { 
-                label: "Communication", 
-                old: "Manual shouting or phone calls.", 
+              {
+                label: "Communication",
+                old: "Manual shouting or phone calls.",
                 new: "Automated real-time notifications.",
                 icon: "📱"
               },
-              { 
-                label: "Wait Times", 
-                old: "Vague, stressful guesses.", 
+              {
+                label: "Wait Times",
+                old: "Vague, stressful guesses.",
                 new: "Live, data-driven countdowns.",
                 icon: "⏱️"
               },
-              { 
-                label: "Grace Period", 
-                old: "Lose spot if away for 2 minutes.", 
+              {
+                label: "Grace Period",
+                old: "Lose spot if away for 2 minutes.",
                 new: "30-min window to rejoin.",
                 icon: "🔄"
               },
-              { 
-                label: "Barber Focus", 
-                old: "Interrupted by constant questions.", 
+              {
+                label: "Barber Focus",
+                old: "Interrupted by constant questions.",
                 new: "Pure focus on the craft.",
                 icon: "✂️"
               },
-              { 
-                label: "Revenue", 
-                old: "Manual tallying in notebooks.", 
+              {
+                label: "Revenue",
+                old: "Manual tallying in notebooks.",
                 new: "Live financial analytics.",
                 icon: "💰"
               },
-              { 
-                label: "Inventory", 
-                old: "Random shelf stock guessing.", 
+              {
+                label: "Inventory",
+                old: "Random shelf stock guessing.",
                 new: "Unified digital menu & stock.",
                 icon: "📦"
               },
-              { 
-                label: "Brand Image", 
-                old: "Shop from the past.", 
+              {
+                label: "Brand Image",
+                old: "Shop from the past.",
                 new: "Elite tech-enabled destination.",
                 icon: "⭐"
               }
             ].map((item, i) => (
-              <motion.div 
+              <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -218,7 +218,7 @@ const Pitch = () => {
                   {item.icon}
                 </div>
                 <h4 className="text-xl font-black mb-6" style={{ color: '#000000' }}>{item.label}</h4>
-                
+
                 <div className="space-y-4">
                   <div className="p-4 bg-rose-50 rounded-2xl border-l-4 border-rose-500">
                     <span className="text-[10px] font-black uppercase text-rose-600 block mb-1">Old Way</span>
@@ -242,84 +242,84 @@ const Pitch = () => {
             <span className="text-indigo-200 uppercase tracking-widest font-bold text-sm">The Solution</span>
           </motion.div>
           <div className="text-center mb-20">
-            <motion.h2 
+            <motion.h2
               {...fadeInUp}
               className="text-4xl md:text-6xl font-bold font-outfit mb-6"
             >
               Simplicity Meets Technology.
             </motion.h2>
-            <motion.p 
+            <motion.p
               {...fadeInUp}
               className="text-xl md:text-2xl text-white max-w-3xl mx-auto"
             >
-              TrimTime isn't just software; it's your shop's digital heartbeat. 
+              TrimTime isn't just software; it's your shop's digital heartbeat.
               Organized, transparent, and built for barbers.
             </motion.p>
           </div>
 
-          <motion.div 
+          <motion.div
             variants={staggerContainer}
             initial="initial"
             whileInView="whileInView"
             className="grid md:grid-cols-3 gap-8"
           >
             {[
-              { 
-                title: "Digital Tokens, Zero Friction", 
+              {
+                title: "Digital Tokens, Zero Friction",
                 desc: "Replace 'who's next?' chaos with a fair, automated sequence. Customers know their place, and you know your flow.",
                 icon: "🎟️",
                 impact: "Removes verbal arguments and confusion at the door."
               },
-              { 
-                title: "Instant Recall, No Distractions", 
+              {
+                title: "Instant Recall, No Distractions",
                 desc: "Notify the next customer with a single tap from your dashboard. Keep your barbers focused on the cut, not the waiting room.",
                 icon: "⚡",
                 impact: "Increases revenue per chair by reducing idle time between cuts."
               },
-              { 
-                title: "Live Heartbeat, Total Trust", 
+              {
+                title: "Live Heartbeat, Total Trust",
                 desc: "Your wait times update automatically across all devices. Total transparency shows customers you value every second of their time.",
                 icon: "⏱️",
                 impact: "Turns impatient walk-ins into loyal, patient clients."
               },
-              { 
-                title: "Auto-Wait Estimator", 
+              {
+                title: "Auto-Wait Estimator",
                 desc: "Smart algorithms learn your shop's pace and provide ultra-accurate wait-time estimates for every token.",
                 icon: "🧠",
                 impact: "Gives customers the confidence to wait without second-guessing."
               },
-              { 
-                title: "Secure & Privacy-First", 
+              {
+                title: "Secure & Privacy-First",
                 desc: "Elite security standards protect your customer data. No data selling, no tracking—just pure business utility.",
                 icon: "🛡️",
                 impact: "Builds long-term trust with your high-value clientele."
               },
-              { 
-                title: "Zero-Hardware Deployment", 
+              {
+                title: "Zero-Hardware Deployment",
                 desc: "Works on any smart TV, tablet, or phone. No expensive proprietary machines to buy—just log in and lead.",
                 icon: "📺",
                 impact: "Eliminates high upfront costs and complicated installations."
               },
-              { 
-                title: "Smart Booking Buffer", 
+              {
+                title: "Smart Booking Buffer",
                 desc: "Advanced logic that automatically adds buffer time between large services to prevent staff burnout.",
                 icon: "⏳",
                 impact: "Keeps the shop rhythm smooth even during complex service days."
               },
-              { 
-                title: "Digital Check-In Kiosk", 
+              {
+                title: "Digital Check-In Kiosk",
                 desc: "Turn any spare tablet into a premium self-service kiosk. Let walk-ins join the queue without talking to anyone.",
                 icon: "📟",
                 impact: "Reduces front-desk workload and modernizes your entrance."
               },
-              { 
-                title: "Barber Performance Insights", 
+              {
+                title: "Barber Performance Insights",
                 desc: "Track which barbers are your fastest finishers and who brings in the most repeat regulars.",
                 icon: "📊",
                 impact: "Enables data-driven bonuses and better staff scheduling."
               }
             ].map((item, index) => (
-              <motion.div 
+              <motion.div
                 key={index}
                 variants={fadeInUp}
                 className="bg-white/10 backdrop-blur-lg p-8 rounded-[40px] border border-white/20 hover:bg-white/20 transition-all cursor-default flex flex-col h-full"
@@ -339,15 +339,15 @@ const Pitch = () => {
       {/* Owner Dashboard Showcase */}
       <section className="py-24 px-6 bg-white">
         <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-16 items-center">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: -50 }}
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ duration: 1 }}
             className="rounded-3xl overflow-hidden shadow-2xl bg-slate-900 p-2"
           >
-             <img 
-              src="/assets/pitch/dashboard.png" 
-              alt="TrimTime Dashboard" 
+            <img
+              src="/assets/pitch/dashboard.png"
+              alt="TrimTime Dashboard"
               className="w-full h-auto rounded-2xl"
             />
           </motion.div>
@@ -369,7 +369,7 @@ const Pitch = () => {
                   { title: "Staff Roles & Security", desc: "Set custom access levels for barbers and managers. Keep your business data secure and private." }
                 ].map((item, i) => (
                   <div key={i} className="flex gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-sm">
-                    <div className="bg-indigo-600 p-3 rounded-xl h-fit text-white font-bold">0{i+1}</div>
+                    <div className="bg-indigo-600 p-3 rounded-xl h-fit text-white font-bold">0{i + 1}</div>
                     <div>
                       <h4 className="font-black mb-1" style={{ color: '#000000' }}>{item.title}</h4>
                       <p className="text-slate-900 text-sm leading-relaxed">{item.desc}</p>
@@ -406,16 +406,16 @@ const Pitch = () => {
               ))}
             </ul>
           </motion.div>
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.9, x: 50 }}
             whileInView={{ opacity: 1, scale: 1, x: 0 }}
             transition={{ duration: 1 }}
             className="relative"
           >
             <div className="absolute -inset-4 bg-indigo-500/10 rounded-[40px] blur-2xl" />
-            <img 
-              src="/assets/pitch/dashboard.png" 
-              alt="Public Display System" 
+            <img
+              src="/assets/pitch/dashboard.png"
+              alt="Public Display System"
               className="relative rounded-[32px] shadow-2xl border-4 border-white"
             />
           </motion.div>
@@ -435,7 +435,7 @@ const Pitch = () => {
 
           <div className="grid md:grid-cols-2 gap-12">
             {/* Customer Flow */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
@@ -471,7 +471,7 @@ const Pitch = () => {
             </motion.div>
 
             {/* Owner Flow */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, x: 30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
@@ -519,11 +519,11 @@ const Pitch = () => {
             Join the Founding Members
           </motion.h2>
           <motion.p {...fadeInUp} className="text-xl text-slate-900 font-medium mb-12">
-            We're looking for visionary shop owners to help us define the future of barbering. 
+            We're looking for visionary shop owners to help us define the future of barbering.
             Enjoy full access for a nominal fee.
           </motion.p>
-          
-          <motion.div 
+
+          <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             whileInView={{ opacity: 1, scale: 1 }}
             className="bg-white p-12 rounded-[40px] shadow-xl border border-slate-200 relative overflow-hidden"
@@ -568,7 +568,7 @@ const Pitch = () => {
         <motion.div {...fadeInUp}>
           <h2 className="text-3xl md:text-5xl font-bold mb-8">Ready to Professionalize Your Shop?</h2>
           <p className="text-slate-200 mb-12 text-lg max-w-2xl mx-auto font-medium">
-            Take the first step towards a more efficient, profitable, and stress-free business. 
+            Take the first step towards a more efficient, profitable, and stress-free business.
             TrimTime is here to help you grow.
           </p>
           <div className="flex flex-col md:flex-row gap-4 justify-center">

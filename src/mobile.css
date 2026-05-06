@@ -83,4 +83,15 @@
     height: 44px !important;
     font-size: 16px !important;
   }
+
+  /* Strict width enforcement */
+  .full-width-mobile {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  .no-scroll-x {
+    overflow-x: hidden !important;
+  }
 }

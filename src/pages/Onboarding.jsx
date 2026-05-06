@@ -16,7 +16,7 @@ const slides = [
     accent: "#05A357"
   },
   {
-    title: "Best Barbers and Saloons",
+    title: "Best Barbers and Salons",
     description: "Browse master profiles and choose the specialist that fits your style.",
     image: "/assets/salman.jpeg",
     accent: "#EE4035"

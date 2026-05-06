@@ -123,7 +123,7 @@ const AdminAnalytics = () => {
         fetchAllAnalytics();
     }, []);
 
-    if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#000000' }}>Loading global analytics...</div>;
+    if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-main)' }}>Loading global analytics...</div>;
 
     return (
         <div className="admin-page-container" style={{ padding: '24px' }}>
@@ -141,43 +141,43 @@ const AdminAnalytics = () => {
                     }
                 }
             `}</style>
-            <h2 style={{ marginBottom: '24px', color: '#1a1a2e' }}>📊 Global Performance Analytics</h2>
+            <h2 style={{ marginBottom: '24px', color: 'var(--text-main)' }}>📊 Global Performance Analytics</h2>
 
             {/* Overall Cards */}
             <div className="overall-analytics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px' }}>
-                <div style={{ padding: '20px', backgroundColor: '#e8f5e9', borderRadius: '12px', border: '1px solid #c8e6c9', textAlign: 'center' }}>
-                    <div style={{ fontSize: '12px', color: '#2e7d32', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '8px' }}>Total Revenue</div>
-                    <div style={{ fontSize: '28px', fontWeight: '800', color: '#1b5e20' }}>₹{data.overall.totalRevenue.toLocaleString('en-IN')}</div>
+                <div style={{ padding: '24px', background: 'var(--surface)', borderRadius: '24px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--success)', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '8px' }}>Total Revenue</div>
+                    <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main)' }}>₹{data.overall.totalRevenue.toLocaleString('en-IN')}</div>
                 </div>
-                <div style={{ padding: '20px', backgroundColor: '#e3f2fd', borderRadius: '12px', border: '1px solid #bbdefb', textAlign: 'center' }}>
-                    <div style={{ fontSize: '12px', color: '#1565c0', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '8px' }}>Total Tokens</div>
-                    <div style={{ fontSize: '28px', fontWeight: '800', color: '#0d47a1' }}>{data.overall.totalTokens}</div>
+                <div style={{ padding: '24px', background: 'var(--surface)', borderRadius: '24px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--primary)', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '8px' }}>Total Tokens</div>
+                    <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main)' }}>{data.overall.totalTokens}</div>
                 </div>
-                <div style={{ padding: '20px', backgroundColor: '#f3e5f5', borderRadius: '12px', border: '1px solid #e1bee7', textAlign: 'center' }}>
-                    <div style={{ fontSize: '12px', color: '#7b1fa2', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '8px' }}>Avg Service Time</div>
-                    <div style={{ fontSize: '28px', fontWeight: '800', color: '#4a148c' }}>{data.overall.avgServiceTime}m</div>
+                <div style={{ padding: '24px', background: 'var(--surface)', borderRadius: '24px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--accent)', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '8px' }}>Avg Service Time</div>
+                    <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main)' }}>{data.overall.avgServiceTime}m</div>
                 </div>
             </div>
 
             <div className="leaderboards-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
                 {/* Shop Leaderboard */}
                 <div>
-                    <h3 style={{ fontSize: '18px', marginBottom: '15px', color: '#000000' }}>🏪 Shop Performance</h3>
-                    <div style={{ backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+                    <h3 style={{ fontSize: '18px', marginBottom: '15px', color: 'var(--text-main)' }}>🏪 Shop Performance</h3>
+                    <div style={{ background: 'var(--surface)', borderRadius: '24px', border: '1px solid var(--border)', overflow: 'hidden' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
-                                <tr style={{ backgroundColor: '#f8f9fa' }}>
-                                    <th style={{ padding: '12px 15px', textAlign: 'left', fontSize: '12px', color: '#000000', fontWeight: 'bold' }}>Shop</th>
-                                    <th style={{ padding: '12px 15px', textAlign: 'right', fontSize: '12px', color: '#000000', fontWeight: 'bold' }}>Tokens</th>
-                                    <th style={{ padding: '12px 15px', textAlign: 'right', fontSize: '12px', color: '#000000', fontWeight: 'bold' }}>Revenue</th>
+                                <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
+                                    <th style={{ padding: '16px 20px', textAlign: 'left', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 'bold', textTransform: 'uppercase' }}>Shop</th>
+                                    <th style={{ padding: '16px 20px', textAlign: 'right', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 'bold', textTransform: 'uppercase' }}>Tokens</th>
+                                    <th style={{ padding: '16px 20px', textAlign: 'right', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 'bold', textTransform: 'uppercase' }}>Revenue</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {data.shopMetrics.map(shop => (
-                                    <tr key={shop.name} style={{ borderTop: '1px solid #eee' }}>
-                                        <td style={{ padding: '12px 15px', fontSize: '14px', fontWeight: '600', color: '#000000' }}>{shop.name}</td>
-                                        <td style={{ padding: '12px 15px', textAlign: 'right', fontSize: '14px', color: '#000000' }}>{shop.tokens}</td>
-                                        <td style={{ padding: '12px 15px', textAlign: 'right', fontSize: '14px', color: '#1b5e20', fontWeight: 'bold' }}>₹{shop.revenue.toLocaleString('en-IN')}</td>
+                                    <tr key={shop.name} style={{ borderTop: '1px solid var(--border)' }}>
+                                        <td style={{ padding: '16px 20px', fontSize: '14px', fontWeight: '600', color: 'var(--text-main)' }}>{shop.name}</td>
+                                        <td style={{ padding: '16px 20px', textAlign: 'right', fontSize: '14px', color: 'var(--text-main)' }}>{shop.tokens}</td>
+                                        <td style={{ padding: '16px 20px', textAlign: 'right', fontSize: '14px', color: 'var(--success)', fontWeight: 'bold' }}>₹{shop.revenue.toLocaleString('en-IN')}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -187,17 +187,17 @@ const AdminAnalytics = () => {
 
                 {/* Staff Leaderboard */}
                 <div>
-                    <h3 style={{ fontSize: '18px', marginBottom: '15px', color: '#000000' }}>✂️ Top Barbers</h3>
+                    <h3 style={{ fontSize: '18px', marginBottom: '15px', color: 'var(--text-main)' }}>✂️ Top Barbers</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         {data.staffMetrics.slice(0, 8).map((staff, idx) => (
-                            <div key={staff.name + idx} style={{ padding: '12px 15px', backgroundColor: '#fff', borderRadius: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div key={staff.name + idx} style={{ padding: '16px 20px', background: 'var(--surface)', borderRadius: '16px', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
-                                    <div style={{ fontSize: '14px', fontWeight: '700', color: '#000000' }}>{staff.name}</div>
-                                    <div style={{ fontSize: '11px', color: '#333333' }}>{staff.shopName}</div>
+                                    <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)' }}>{staff.name}</div>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{staff.shopName}</div>
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
-                                    <div style={{ fontSize: '14px', fontWeight: '800', color: '#673ab7' }}>₹{staff.revenue.toLocaleString('en-IN')}</div>
-                                    <div style={{ fontSize: '11px', color: '#000000' }}>{staff.tokens} tokens • {staff.avgTime}m avg</div>
+                                    <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--primary)' }}>₹{staff.revenue.toLocaleString('en-IN')}</div>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{staff.tokens} tokens • {staff.avgTime}m avg</div>
                                 </div>
                             </div>
                         ))}

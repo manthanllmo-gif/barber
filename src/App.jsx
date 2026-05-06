@@ -11,7 +11,7 @@ import AdminDashboard from './pages/AdminDashboard.jsx';
 import PublicDisplay from './pages/PublicDisplay.jsx';
 import TimerDemo from './pages/TimerDemo.jsx';
 import Pitch from './pages/Pitch.jsx';
-import Saloons from './pages/Saloons.jsx';
+import Salons from './pages/Salons.jsx';
 import ShopProducts from './pages/ShopProducts.jsx';
 import Barbers from './pages/Barbers.jsx';
 import BarberProfile from './pages/BarberProfile.jsx';
@@ -21,6 +21,7 @@ import Checkout from './pages/Checkout';
 import ScrollToTop from './components/common/ScrollToTop';
 import Preloader from './components/common/Preloader.jsx';
 import { AnimatePresence } from 'framer-motion';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 const AdminRoute = ({ children }) => {
   const { user, role, loading } = useAuth();
@@ -77,6 +78,7 @@ function App() {
 
   return (
     <>
+    <ThemeProvider>
       <ScrollToTop />
       <AnimatePresence mode="wait">
         {showLoader && !role && <Preloader key="preloader" />}
@@ -88,7 +90,7 @@ function App() {
           <MainLayout>
             <Routes>
               <Route path="/" element={!onboardingComplete ? <Navigate to="/onboarding" /> : <Home />} />
-              <Route path="/saloons" element={<Saloons />} />
+              <Route path="/salons" element={<Salons />} />
               <Route path="/shop" element={<ShopProducts />} />
               <Route path="/barbers" element={<Barbers />} />
               <Route path="/barbers/:id" element={<BarberProfile />} />
@@ -116,6 +118,7 @@ function App() {
           </MainLayout>
         } />
       </Routes>
+    </ThemeProvider>
     </>
   );
 }
